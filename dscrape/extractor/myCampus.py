@@ -159,3 +159,4 @@ class UOIT_Dumper(CourseDumper):
 class UVIC_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("banner.uvic.ca", "UVIC", retries, timeout)
+        

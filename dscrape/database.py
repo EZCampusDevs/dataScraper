@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event
 from sqlalchemy import (
     Column,
@@ -16,6 +17,8 @@ from sqlalchemy import (
 from sqlalchemy import UniqueConstraint
 import os
 
+from . import dataUtil
+from . import logger
 
 Engine = None
 Session = None
@@ -67,21 +70,40 @@ class TBL_Course(Base):
         ),
     )
 
+class TBL_Class_Type(Base):
+
+    __tablename__ = "tbl_classtype"
+
+    class_type_id = Column(Integer, primary_key=True, autoincrement=True)
+    class_type = Column(VARCHAR)
 
 class TBL_Course_Data(Base):
     __tablename__ = "tbl_course_data"
 
     course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
 
+    # i'm not really sure what this actually is 
     id = Column(Integer)
-    course_reference_number = Column(VARCHAR)
-    course_number = Column(VARCHAR)
-    subject = Column(VARCHAR)
-    subject_description = Column(VARCHAR)
-    sequence_number = Column(VARCHAR)
-    campus_description = Column(VARCHAR)
-    schedule_type_tescription = Column(VARCHAR)
+
+    # course reference number / crn
+    crn = Column(Integer)
+
+    # Biology II 
     course_title = Column(VARCHAR)
+    # BIOL
+    subject = Column(VARCHAR)
+    # Biology 
+    subject_long = Column(VARCHAR)
+
+    # 001 / 002 / 003...; conerting to int so will need to pad 0 later if needed
+    sequence_number = Column(Integer)
+
+    # which campus -> 'OT-North Oshawa'
+    campus_description = Column(VARCHAR)
+
+    # lab, lecture, tutorial
+    class_type = Column(Integer, ForeignKey("tbl_classtype.class_type_id"))
+
     credit_hours = Column(Integer)
     maximum_enrollment = Column(Integer)
     enrollment = Column(Integer)
@@ -89,7 +111,7 @@ class TBL_Course_Data(Base):
     wait_capacity = Column(Integer)
     wait_count = Column(Integer)
     wait_available = Column(Integer)
-    corss_list = Column(VARCHAR)
+    cross_list = Column(VARCHAR)
     cross_list_capacity = Column(VARCHAR)
     cross_list_count = Column(Integer)
     cross_list_available = Column(Integer)
@@ -99,11 +121,44 @@ class TBL_Course_Data(Base):
     open_section = Column(Boolean)
     link_identifier = Column(VARCHAR)
     is_section_linked = Column(Boolean)
-    subject_course = Column(VARCHAR)
     reserved_seat_summary = Column(VARCHAR)
     section_attributes = Column(VARCHAR)
+
+
+    # CLS -> In-Person
+    # WB1 -> Virtual Meet Times
     instructional_method = Column(VARCHAR)
+
+    # In-Person
+    # Virtual Meet Times 
     instructional_method_description = Column(VARCHAR)
+
+
+class TBL_Faculty(Base):
+
+    __tablename__ = "tbl_faculty"
+
+    course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
+
+    
+    instructor = Column(VARCHAR)
+    instructor_email = Column(VARCHAR)
+
+
+def get_class_type_from_str(value: str, session: Session):
+
+    # Try to find the class_type_id for the given value
+    class_type = session.query(TBL_Class_Type).filter_by(class_type=value).first()
+
+    if class_type is not None:
+        return class_type.class_type_id
+    
+    new_class_type = TBL_Class_Type(class_type=value)
+    session.add(new_class_type)
+
+    session.flush()
+
+    return new_class_type.class_type_id
 
 
 def add_terms(term_ids: list[int], term_descriptions: list[str]):
@@ -192,20 +247,51 @@ def add_course(term_id: int, course_code: str, course_description: str):
 def add_course_data(course_ids: list[int], datas: list[dict[str]]):
     with Session.begin() as session:
         for course_id, data in zip(course_ids, datas):
+
+            crn = dataUtil.parse_int(data["courseReferenceNumber"])
+
+            if crn == -1:
+                logger.warn("CRN with value '{}' was unable to be parsed as int, skipping".format(data["courseReferenceNumber"]))
+                continue
+
+            sequence_number = dataUtil.parse_int(data["sequenceNumber"])
+            
+            if sequence_number == -1:
+                logger.warn("SequenceNumber with value '{}' was unable to be parsed as int, skipping".format(data["sequenceNumber"]))
+                continue
+
+            # if something goes wrong here it's gonna frick everything up
+            class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
+
             stmt = (
                 TBL_Course_Data.__table__.insert()
                 .prefix_with("OR IGNORE")
                 .values(
+                    # course code
                     course_id=course_id,
+
+                    # i have no idea what this value means
                     id=data["id"],
-                    course_reference_number=data["courseReferenceNumber"],
-                    course_number=data["courseNumber"],
-                    subject=data["subject"],
-                    subject_description=data["subjectDescription"],
-                    sequence_number=data["sequenceNumber"],
-                    campus_description=data["campusDescription"],
-                    schedule_type_tescription=data["scheduleTypeDescription"],
+
+                    # crn / course reference number; this should be an int always
+                    crn=crn,
+
+                    # Biology II
                     course_title=data["courseTitle"],
+                    # BIOL
+                    subject=data["subject"],
+                    # Biology
+                    subject_long=data["subjectDescription"],
+
+                    # 001, 002, 003...; should always be int
+                    sequence_number=sequence_number,
+
+                    # TODO: add a table for campus instead of using a string
+                    campus_description=data["campusDescription"],
+
+                    # Lecture, Laborator, Tutorial
+                    class_type=class_type_id,
+
                     credit_hours=data["creditHours"],
                     maximum_enrollment=data["maximumEnrollment"],
                     enrollment=data["enrollment"],
@@ -213,7 +299,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     wait_capacity=data["waitCapacity"],
                     wait_count=data["waitCount"],
                     wait_available=data["waitAvailable"],
-                    corss_list=data["crossList"],
+                    cross_list=data["crossList"],
                     cross_list_capacity=data["crossListCapacity"],
                     cross_list_count=data["crossListCount"],
                     cross_list_available=data["crossListAvailable"],
@@ -223,7 +309,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     open_section=data["openSection"],
                     link_identifier=data["linkIdentifier"],
                     is_section_linked=data["isSectionLinked"],
-                    subject_course=data["subjectCourse"],
+                    # subject_course=data["subjectCourse"],
                     reserved_seat_summary=data["reservedSeatSummary"],
                     section_attributes=data["sectionAttributes"],
                     instructional_method=data["instructionalMethod"],
