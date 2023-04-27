@@ -82,11 +82,11 @@ class TBL_Course_Data(Base):
 
     course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
 
+    # course reference number / crn
+    crn = Column(VARCHAR, primary_key=True)
+
     # i'm not really sure what this actually is 
     id = Column(Integer)
-
-    # course reference number / crn
-    crn = Column(Integer)
 
     # Biology II 
     course_title = Column(VARCHAR)
@@ -111,18 +111,18 @@ class TBL_Course_Data(Base):
     wait_capacity = Column(Integer)
     wait_count = Column(Integer)
     wait_available = Column(Integer)
-    cross_list = Column(VARCHAR)
-    cross_list_capacity = Column(VARCHAR)
-    cross_list_count = Column(Integer)
-    cross_list_available = Column(Integer)
+    # cross_list = Column(VARCHAR)
+    # cross_list_capacity = Column(VARCHAR)
+    # cross_list_count = Column(Integer)
+    # cross_list_available = Column(Integer)
     credit_hour_high = Column(Integer)
     credit_hour_low = Column(Integer)
-    credit_hour_indicator = Column(VARCHAR)
+    # credit_hour_indicator = Column(VARCHAR)
     open_section = Column(Boolean)
     link_identifier = Column(VARCHAR)
     is_section_linked = Column(Boolean)
-    reserved_seat_summary = Column(VARCHAR)
-    section_attributes = Column(VARCHAR)
+    #reserved_seat_summary = Column(VARCHAR)
+    #section_attributes = Column(VARCHAR)
 
 
     # CLS -> In-Person
@@ -143,6 +143,7 @@ class TBL_Faculty(Base):
     
     instructor = Column(VARCHAR)
     instructor_email = Column(VARCHAR)
+    instructor_rating = Column(Integer)
 
 
 def get_class_type_from_str(value: str, session: Session):
@@ -247,13 +248,7 @@ def add_course(term_id: int, course_code: str, course_description: str):
 def add_course_data(course_ids: list[int], datas: list[dict[str]]):
     with Session.begin() as session:
         for course_id, data in zip(course_ids, datas):
-
-            crn = dataUtil.parse_int(data["courseReferenceNumber"])
-
-            if crn == -1:
-                logger.warn("CRN with value '{}' was unable to be parsed as int, skipping".format(data["courseReferenceNumber"]))
-                continue
-
+            
             sequence_number = dataUtil.parse_int(data["sequenceNumber"])
             
             if sequence_number == -1:
@@ -274,7 +269,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     id=data["id"],
 
                     # crn / course reference number; this should be an int always
-                    crn=crn,
+                    crn=data["courseReferenceNumber"],
 
                     # Biology II
                     course_title=data["courseTitle"],
@@ -299,10 +294,10 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     wait_capacity=data["waitCapacity"],
                     wait_count=data["waitCount"],
                     wait_available=data["waitAvailable"],
-                    cross_list=data["crossList"],
-                    cross_list_capacity=data["crossListCapacity"],
-                    cross_list_count=data["crossListCount"],
-                    cross_list_available=data["crossListAvailable"],
+                    # cross_list=data["crossList"],
+                    # cross_list_capacity=data["crossListCapacity"],
+                    # cross_list_count=data["crossListCount"],
+                    # cross_list_available=data["crossListAvailable"],
                     credit_hour_high=data["creditHourHigh"],
                     credit_hour_low=data["creditHourLow"],
                     credit_hour_indicator=data["creditHourIndicator"],
@@ -310,8 +305,8 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     link_identifier=data["linkIdentifier"],
                     is_section_linked=data["isSectionLinked"],
                     # subject_course=data["subjectCourse"],
-                    reserved_seat_summary=data["reservedSeatSummary"],
-                    section_attributes=data["sectionAttributes"],
+                    #reserved_seat_summary=data["reservedSeatSummary"],
+                    #section_attributes=data["sectionAttributes"],
                     instructional_method=data["instructionalMethod"],
                     instructional_method_description=data[
                         "instructionalMethodDescription"
