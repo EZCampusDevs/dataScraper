@@ -121,7 +121,10 @@ class CourseDumper(requester.Requester):
         r = self.request("get", url)
 
         if r.status_code == 200:
-            return r.json()
+
+            j = r.json() 
+
+            return j
 
         logger.warning(
             f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}"

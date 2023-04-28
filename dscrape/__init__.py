@@ -39,6 +39,8 @@ def scrape_course_information(dumper):
         course_code = [i["code"] for i in course_codes]
         course_desc = [i["description"] for i in course_codes]
 
+        logger.debug(f"Got course codes {course_code}")
+
         i = database.add_courses(
             [id for i in range(len(course_desc))], course_code, course_desc
         )
@@ -51,7 +53,8 @@ def scrape_course_information(dumper):
             continue
 
         course_data = course_data["data"]
-
+        course_data_str = str(course_data)[0:200]
+        logger.debug(f"Course data gotten: {course_data_str}")
         database.add_course_data(i, course_data)
 
 def main():
@@ -60,8 +63,12 @@ def main():
 
     database.init_database("myCampus.sqlite3", "./")
 
-    # main2()
-    # return
+    main2()
+    return
+
+
+
+
     with ThreadPoolExecutor(max_workers=5) as pool:
 
         pool.map(scrape_course_information, extractor.extractors)

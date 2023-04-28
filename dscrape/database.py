@@ -96,7 +96,7 @@ class TBL_Course_Data(Base):
     subject_long = Column(VARCHAR)
 
     # 001 / 002 / 003...; conerting to int so will need to pad 0 later if needed
-    sequence_number = Column(Integer)
+    sequence_number = Column(VARCHAR)
 
     # which campus -> 'OT-North Oshawa'
     campus_description = Column(VARCHAR)
@@ -133,15 +133,21 @@ class TBL_Course_Data(Base):
     # Virtual Meet Times 
     instructional_method_description = Column(VARCHAR)
 
+class TBL_Course_Faculty(Base):
+
+    __tablename__ = "tbl_course_faculty"
+
+    course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
+
+    faculty_id = Column(Integer, ForeignKey("tbl_faculty.faculty_id"), primary_key=True)
 
 class TBL_Faculty(Base):
 
     __tablename__ = "tbl_faculty"
 
-    course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
-
-    
-    instructor = Column(VARCHAR)
+    faculty_id = Column(Integer, primary_key=True, autoincrement=True)
+    banner_id = Column(LargeBinary, unique=True)
+    instructor_name = Column(VARCHAR)
     instructor_email = Column(VARCHAR)
     instructor_rating = Column(Integer)
 
@@ -248,15 +254,13 @@ def add_course(term_id: int, course_code: str, course_description: str):
 def add_course_data(course_ids: list[int], datas: list[dict[str]]):
     with Session.begin() as session:
         for course_id, data in zip(course_ids, datas):
-            
-            sequence_number = dataUtil.parse_int(data["sequenceNumber"])
-            
-            if sequence_number == -1:
-                logger.warn("SequenceNumber with value '{}' was unable to be parsed as int, skipping".format(data["sequenceNumber"]))
-                continue
+
+            logger.debug(f"Adding: {course_id}'s data to the database")
 
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
+            
+            logger.debug(f"class_type_id: {class_type_id}")
 
             stmt = (
                 TBL_Course_Data.__table__.insert()
@@ -264,29 +268,29 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                 .values(
                     # course code
                     course_id=course_id,
-
+# 
                     # i have no idea what this value means
                     id=data["id"],
-
+# 
                     # crn / course reference number; this should be an int always
                     crn=data["courseReferenceNumber"],
-
+# 
                     # Biology II
                     course_title=data["courseTitle"],
                     # BIOL
                     subject=data["subject"],
                     # Biology
                     subject_long=data["subjectDescription"],
-
+# 
                     # 001, 002, 003...; should always be int
-                    sequence_number=sequence_number,
-
+                    sequence_number=str(data["sequenceNumber"]),
+# 
                     # TODO: add a table for campus instead of using a string
                     campus_description=data["campusDescription"],
-
+# 
                     # Lecture, Laborator, Tutorial
                     class_type=class_type_id,
-
+# 
                     credit_hours=data["creditHours"],
                     maximum_enrollment=data["maximumEnrollment"],
                     enrollment=data["enrollment"],
@@ -300,7 +304,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     # cross_list_available=data["crossListAvailable"],
                     credit_hour_high=data["creditHourHigh"],
                     credit_hour_low=data["creditHourLow"],
-                    credit_hour_indicator=data["creditHourIndicator"],
+                    # credit_hour_indicator=data["creditHourIndicator"],
                     open_section=data["openSection"],
                     link_identifier=data["linkIdentifier"],
                     is_section_linked=data["isSectionLinked"],
@@ -313,8 +317,43 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     ],
                 )
             )
-
+ 
             session.execute(stmt)
+ 
+
+            for faculty in data["faculty"]:
+
+                _ = faculty["displayName"] + (faculty.get("emailAddress", "") or "")
+                banner_id = dataUtil.sha224_str(_)
+
+                result = (
+                    session.query(TBL_Faculty)
+                    .filter_by(banner_id = banner_id)
+                    .first()
+                )
+
+                if not result:
+                    result = TBL_Faculty(
+                        banner_id=banner_id,
+                        instructor_name=faculty["displayName"],
+                        instructor_email=faculty["emailAddress"],
+                        instructor_rating=0,
+                    )
+
+                    session.add(result)
+                    session.flush()
+
+                faculty_id = result.faculty_id
+
+                stmt = TBL_Course_Faculty.__table__.insert().prefix_with("OR IGNORE") \
+                    .values(
+                        course_id = course_id,
+                        faculty_id =faculty_id 
+                    )
+
+                result = session.execute(stmt)
+
+
 
         session.flush()
 

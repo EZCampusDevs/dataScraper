@@ -1,5 +1,5 @@
 import time
-
+import hashlib
 
 def time_now_int():
     return int(time.time())
@@ -16,3 +16,11 @@ def parse_int(value, default=-1):
     
     except ValueError:
         return default
+
+
+
+def sha224_str(data: str):
+
+    sha = hashlib.sha224(data.encode())
+
+    return sha.digest()
