@@ -1,7 +1,4 @@
 from . import myCampus
 
 
-extractors = [
-    myCampus.UOIT_Dumper,
-    myCampus.UVIC_Dumper
-]
+extractors = [myCampus.UOIT_Dumper, myCampus.UVIC_Dumper]

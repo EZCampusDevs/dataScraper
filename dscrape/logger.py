@@ -20,9 +20,7 @@ def create_setup_logger(name: str = None, log_file: str = "", log_level=logging.
     else:
         logger = logging.getLogger()
 
-    formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"
-    )
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S")
 
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setFormatter(formatter)

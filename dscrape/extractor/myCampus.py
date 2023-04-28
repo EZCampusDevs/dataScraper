@@ -7,7 +7,9 @@ from .. import logger
 
 MAX_COUNT = 9999999
 
-TERM_AUTH_URL = "https://{HOST}/StudentRegistrationSsb/ssb/term/termSelection?mode=search&mepCode={MEP_CODE}"
+TERM_AUTH_URL = (
+    "https://{HOST}/StudentRegistrationSsb/ssb/term/termSelection?mode=search&mepCode={MEP_CODE}"
+)
 TERM_SEARCH_AUTH_URL = (
     "https://{HOST}/StudentRegistrationSsb/ssb/term/search?mode=search&term={TERM}"
 )
@@ -16,6 +18,13 @@ TERM_SEARCH_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/classSearch/get
 COURSE_CODES_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/classSearch/get_subjectcoursecombo?searchTerm={SEARCH}&term={TERM_ID}&offset=1&max={MAX_COUNT}"
 
 COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/searchResults?mepCode={MEP_CODE}&txt_term={TERM_ID}&txt_subjectcoursecombo={COURSE_CODES}&pageMaxSize={MAX_COUNT}"
+
+
+# there is a max length URI allowed by the api,
+# this keeps the number of course codes in the url to this number
+# i haven't tested above 500, but my thought is upper limit of 1200 would be fine
+# this would double the speed because it would half the requests, higher this is the better
+COURSE_CODE_REQUEST_AMOUNT = 500
 
 
 class CourseDumper(requester.Requester):
@@ -32,9 +41,7 @@ class CourseDumper(requester.Requester):
 
         self.mep_code = mep_code
 
-        self.term_auth_url = TERM_AUTH_URL.format(
-            HOST=self.hostname, MEP_CODE=self.mep_code
-        )
+        self.term_auth_url = TERM_AUTH_URL.format(HOST=self.hostname, MEP_CODE=self.mep_code)
 
         self.auth_timeout_seconds = 60
         self.auth_hist = {
@@ -74,9 +81,7 @@ class CourseDumper(requester.Requester):
 
         return {}
 
-    def get_json_course_codes(
-        self, term_id: str, search_code: str, max_count: int = MAX_COUNT
-    ):
+    def get_json_course_codes(self, term_id: str, search_code: str, max_count: int = MAX_COUNT):
         self.auth_terms()
 
         url = COURSE_CODES_GET_URL.format(
@@ -98,37 +103,42 @@ class CourseDumper(requester.Requester):
     ):
         self.auth_terms()
 
-        if course_codes is not None:
-            course_code_list = [code.upper() for code in course_codes]
-            course_codes_request = "%2C".join(course_code_list)
+        course_code_count = COURSE_CODE_REQUEST_AMOUNT
+        for i in range(0, len(course_codes), course_code_count):
+            sublist = course_codes[i : i + course_code_count]
 
-        else:
-            course_codes_request = ""
+            if sublist:
+                course_code_list = [code.upper() for code in sublist]
+                course_codes_request = "%2C".join(course_code_list)
 
-        self.session.get(
-            url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
-            timeout=5,
-        )
+            else:
+                continue
 
-        url = COURSE_DATA_GET_URL.format(
-            HOST=self.hostname,
-            MEP_CODE=self.mep_code,
-            TERM_ID=term_id,
-            COURSE_CODES=course_codes_request,
-            MAX_COUNT=max_count,
-        )
+            self.session.get(
+                url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
+                timeout=5,
+            )
 
-        r = self.request("get", url)
+            url = COURSE_DATA_GET_URL.format(
+                HOST=self.hostname,
+                MEP_CODE=self.mep_code,
+                TERM_ID=term_id,
+                COURSE_CODES=course_codes_request,
+                MAX_COUNT=max_count,
+            )
 
-        if r.status_code == 200:
+            r = self.request("get", url)
 
-            j = r.json() 
+            if r.status_code == 200:
+                j = r.json()
 
-            return j
+                yield j
+                continue
 
-        logger.warning(
-            f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}"
-        )
+            logger.warning(
+                f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}"
+            )
+            continue
 
         return {}
 
@@ -162,4 +172,3 @@ class UOIT_Dumper(CourseDumper):
 class UVIC_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("banner.uvic.ca", "UVIC", retries, timeout)
-        
