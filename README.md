@@ -18,3 +18,8 @@ Running:
 ```shell
 python __main__.py
 ```
+
+
+### Code Formatter 
+
+Code formatting is done using [Black](https://github.com/psf/black).
