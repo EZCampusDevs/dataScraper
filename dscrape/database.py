@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import Date, Float, create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import IntegrityError
@@ -6,7 +6,6 @@ from sqlalchemy import event
 from sqlalchemy import (
     Column,
     Integer,
-    String,
     Boolean,
     TIMESTAMP,
     LargeBinary,
@@ -16,12 +15,13 @@ from sqlalchemy import (
 )
 from sqlalchemy import UniqueConstraint
 import os
+from datetime import datetime
 
 from . import dataUtil
 from . import logger
 
 Engine = None
-Session = None
+Session: sessionmaker = None
 Base = declarative_base()
 
 
@@ -47,8 +47,8 @@ def init_database(database_name: str, database_directory: str):
     Base.metadata.create_all(Engine)
 
 
-class TBL_Terms(Base):
-    __tablename__ = "tbl_terms"
+class TBL_Term(Base):
+    __tablename__ = "tbl_term"
 
     term_id = Column(Integer, primary_key=True)
     term_description = Column(VARCHAR(128))
@@ -58,7 +58,7 @@ class TBL_Course(Base):
     __tablename__ = "tbl_course"
 
     course_id = Column(Integer, primary_key=True, autoincrement=True)
-    term_id = Column(Integer, ForeignKey("tbl_terms.term_id"))
+    term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
     course_code = Column(VARCHAR)
     course_description = Column(VARCHAR)
 
@@ -77,11 +77,12 @@ class TBL_Class_Type(Base):
 class TBL_Course_Data(Base):
     __tablename__ = "tbl_course_data"
 
-    course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
+    course_data_id = Column(Integer, autoincrement=True, primary_key=True)
+
+    course_id = Column(Integer, ForeignKey("tbl_course.course_id"))
 
     # course reference number / crn
-    crn = Column(VARCHAR, primary_key=True)
-
+    crn = Column(VARCHAR)
     # i'm not really sure what this actually is
     id = Column(Integer)
 
@@ -129,6 +130,8 @@ class TBL_Course_Data(Base):
     # Virtual Meet Times
     instructional_method_description = Column(VARCHAR)
 
+    __table_args__ = (UniqueConstraint("course_id", "crn", name="_course_id_crn_constraint"),)
+
 
 class TBL_Course_Faculty(Base):
     __tablename__ = "tbl_course_faculty"
@@ -148,7 +151,45 @@ class TBL_Faculty(Base):
     instructor_rating = Column(Integer)
 
 
-def get_class_type_from_str(value: str, session: Session):
+class TBL_Meeting(Base):
+    __tablename__ = "tbl_meeting"
+
+    meeting_id = Column(Integer, autoincrement=True, primary_key=True)
+
+    meeting_hash = Column(LargeBinary, unique=True)
+
+    course_data_id = Column(VARCHAR, ForeignKey("tbl_course_data.course_data_id"))
+
+    term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
+
+    crn = Column(VARCHAR)
+
+    building = Column(VARCHAR)
+    building_description = Column(VARCHAR)
+
+    campus = Column(VARCHAR)
+    campus_description = Column(VARCHAR)
+
+    meeting_type = Column(VARCHAR)
+    meeting_type_description = Column(VARCHAR)
+
+    start_date = Column(Date)
+    end_date = Column(Date)
+
+    begin_time = Column(VARCHAR)
+    end_time = Column(VARCHAR)
+
+    days_of_week = Column(Integer)
+
+    room = Column(VARCHAR)
+
+    category = Column(VARCHAR)
+    credit_hour_session = Column(Float)
+    hours_week = Column(Float)
+    meeting_schedule_type = Column(VARCHAR)
+
+
+def get_class_type_from_str(value: str, session):
     # Try to find the class_type_id for the given value
     class_type = session.query(TBL_Class_Type).filter_by(class_type=value).first()
 
@@ -170,7 +211,7 @@ def add_terms(term_ids: list[int], term_descriptions: list[str]):
     with Session.begin() as session:
         for term_id, term_description in zip(term_ids, term_descriptions):
             stmt = (
-                TBL_Terms.__table__.insert()
+                TBL_Term.__table__.insert()
                 .prefix_with("OR IGNORE")
                 .values(term_id=term_id, term_description=term_description)
             )
@@ -179,16 +220,20 @@ def add_terms(term_ids: list[int], term_descriptions: list[str]):
         session.flush()
 
 
+def add_term_no_transaction(term_id: int, term_description: str, session: sessionmaker):
+    stmt = (
+        TBL_Term.__table__.insert()
+        .prefix_with("OR IGNORE")
+        .values(term_id=term_id, term_description=term_description)
+    )
+    session.execute(stmt)
+
+    session.flush()
+
+
 def add_term(term_id: int, term_description: str):
     with Session.begin() as session:
-        stmt = (
-            TBL_Terms.__table__.insert()
-            .prefix_with("OR IGNORE")
-            .values(term_id=term_id, term_description=term_description)
-        )
-        session.execute(stmt)
-
-        session.flush()
+        add_term_no_transaction(term_id, term_description, session)
 
 
 def add_courses(term_ids: list[int], course_codes: list[str], course_descriptions: list[str]):
@@ -252,12 +297,18 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
 
-            logger.debug(f"class_type_id: {class_type_id}")
 
-            stmt = (
-                TBL_Course_Data.__table__.insert()
-                .prefix_with("OR IGNORE")
-                .values(
+            result = (
+                session.query(TBL_Course_Data)
+                .filter_by(course_id=course_id)
+                .filter_by(crn=data["courseReferenceNumber"])
+                .first()
+            )
+
+            if result:
+                logger.info(f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']}")
+            else:
+                result = TBL_Course_Data(
                     # course code
                     course_id=course_id,
                     #
@@ -277,7 +328,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     # 001, 002, 003...; should always be int
                     sequence_number=str(data["sequenceNumber"]),
                     #
-                    # TODO: add a table for campus instead of using a string
+                    # TODO: add a table for campus instead of using a VARCHAR
                     campus_description=data["campusDescription"],
                     #
                     # Lecture, Laborator, Tutorial
@@ -306,9 +357,10 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     instructional_method=data["instructionalMethod"],
                     instructional_method_description=data["instructionalMethodDescription"],
                 )
-            )
+                session.add(result)
+                session.flush()
 
-            session.execute(stmt)
+            course_data_id = result.course_data_id
 
             for faculty in data["faculty"]:
                 _ = faculty["displayName"] + (faculty.get("emailAddress", "") or "")
@@ -335,6 +387,59 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     .values(course_id=course_id, faculty_id=faculty_id)
                 )
 
-                result = session.execute(stmt)
+                session.execute(stmt)
+
+            # session.flush()
+
+            for meeting in data["meetingsFaculty"]:
+                useful_data = meeting["meetingTime"]
+
+                crn = useful_data["courseReferenceNumber"]
+                term_id = dataUtil.parse_int(useful_data["term"])
+                if term_id == -1:
+                    logger.warning(
+                        f"Got bad term_id of {useful_data['term']} course_id={course_id} for meeting {meeting}"
+                    )
+                    continue
+
+                add_term_no_transaction(term_id, "UNKNOWN AT TIME OF ADDING", session)
+
+                to_insert = TBL_Meeting(
+                    meeting_hash=b"",
+                    course_data_id=course_data_id,
+                    crn=crn,
+                    term_id=term_id,
+                    building=useful_data["building"],
+                    building_description=useful_data["buildingDescription"],
+                    campus=useful_data["campus"],
+                    campus_description=useful_data["campusDescription"],
+                    meeting_type=useful_data["meetingType"],
+                    meeting_type_description=useful_data["meetingTypeDescription"],
+                    start_date=datetime.strptime(useful_data["startDate"], "%m/%d/%Y").date(),
+                    end_date=datetime.strptime(useful_data["endDate"], "%m/%d/%Y").date(),
+                    begin_time=useful_data["beginTime"],
+                    end_time=useful_data["endTime"],
+                    days_of_week=dataUtil.get_weekdays_int(useful_data),
+                    room=useful_data["room"],
+                    category=useful_data["category"],
+                    credit_hour_session=useful_data["creditHourSession"],
+                    hours_week=useful_data["hoursWeek"],
+                    meeting_schedule_type=useful_data["meetingScheduleType"],
+                )
+
+                # we need to make our own unique identifier for the meeting
+                # so this is it, just all the data i figured was important 
+                meeting_hash = dataUtil.sha224_str(
+                    f"{crn}{term_id}{to_insert.building}{to_insert.campus}{to_insert.meeting_type}"
+                    f"{to_insert.start_date}{to_insert.end_date}{to_insert.begin_time}{to_insert.end_time}"
+                    f"{to_insert.days_of_week}{to_insert.room}"
+                )
+
+                to_insert.meeting_hash = meeting_hash
+
+                result = session.query(TBL_Meeting).filter_by(meeting_hash=meeting_hash).first()
+
+                if not result:
+                    session.add(to_insert)
 
         session.flush()

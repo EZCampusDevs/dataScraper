@@ -2,7 +2,7 @@ from datetime import datetime
 
 from concurrent.futures import ThreadPoolExecutor
 
-
+from . import dataUtil
 from . import extractor
 from . import database
 from . import logger
@@ -57,16 +57,26 @@ def scrape_course_information(dumper, debug_break_1=False):
 
 
 def main():
-    logger.create_setup_logger()
+    logger.create_setup_logger(log_file="logs.log")
 
     database.init_database("myCampus.sqlite3", "./")
 
-    # main2()
-    # return
+    started_at = dataUtil.time_now_precise()
+    try:
 
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        pool.map(scrape_course_information, extractor.extractors)
+        # main2()
+        # return
 
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            pool.map(scrape_course_information, extractor.extractors)
+
+    finally:
+
+        ended_at = dataUtil.time_now_precise()
+
+        elapsed = ended_at - started_at
+
+        logger.info(f"Finished after {elapsed:.6f} seconds")
 
 def main2():
     dumper = extractor.myCampus.UOIT_Dumper
