@@ -28,7 +28,8 @@ def create_setup_logger(name: str = None, log_file: str = "", log_level=logging.
     if log_file:
         try:
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        except:pass
+        except:
+            pass
         file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

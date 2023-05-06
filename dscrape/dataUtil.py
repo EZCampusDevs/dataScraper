@@ -1,10 +1,17 @@
 import time
 import hashlib
+import traceback
+from datetime import datetime 
+
+import dateutil.parser as datePasrer
+
 
 from . import constants
+from . import logger
 
 def time_now_precise():
     return time.perf_counter()
+
 
 def time_now_int():
     return int(time.time())
@@ -22,8 +29,8 @@ def parse_int(value, default=-1):
         return default
 
 
-def sha224_str(data: str):
-    sha = hashlib.sha224(data.encode())
+def sha256_of_str(data: str):
+    sha = hashlib.sha256(data.encode())
 
     return sha.digest()
 
@@ -86,3 +93,29 @@ def get_weekdays_int_bad(data: dict[str, bool]):
             value |= constants.SUNDAY
 
     return value
+
+
+
+
+def parse_date(date: str):
+
+    try: 
+        return datetime.strptime(date, "%m/%d/%Y").date() 
+    except ValueError:
+        pass  
+
+    try: 
+        return datetime.strptime(date, "%b %d, %Y").date() 
+    except ValueError:
+        pass  
+
+    try:
+        return datePasrer.parse(date).date()
+
+    except Exception as e:
+        logger.error(e)
+        logger.error(traceback.format_exc())
+        
+        raise e
+
+

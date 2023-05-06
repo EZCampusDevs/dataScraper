@@ -10,6 +10,7 @@ from sqlalchemy import (
     TIMESTAMP,
     LargeBinary,
     BigInteger,
+    BINARY,
     VARCHAR,
     ForeignKey,
 )
@@ -25,7 +26,15 @@ Session: sessionmaker = None
 Base = declarative_base()
 
 
-def init_database(database_name: str, database_directory: str):
+def init_database(
+    use_mysql=False,
+    database_host="localhost",
+    database_port=3306,
+    database_name="hibernate_db",
+    database_user="test",
+    database_pass="root",
+    database_directory="./",
+):
     global Engine, Session, Base
 
     if Engine is not None:
@@ -34,10 +43,14 @@ def init_database(database_name: str, database_directory: str):
     os.makedirs(database_directory, exist_ok=True)
 
     db_path = os.path.join(database_directory, database_name)
-    DB_URL = f"sqlite:///{db_path}"
+    DB_URL = f"sqlite:///{db_path}.sqlite"
+    if use_mysql:
+        DB_URL = f"mysql+mysqlconnector://{database_user}:{database_pass}@{database_host}:{database_port}/{database_name}"
     Engine = create_engine(DB_URL, echo=False)
 
     def _fk_pragma_on_connect(dbapi_con, con_record):
+        if use_mysql:
+            return
         dbapi_con.execute("pragma foreign_keys=ON")
 
     event.listen(Engine, "connect", _fk_pragma_on_connect)
@@ -59,8 +72,8 @@ class TBL_Course(Base):
 
     course_id = Column(Integer, primary_key=True, autoincrement=True)
     term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
-    course_code = Column(VARCHAR)
-    course_description = Column(VARCHAR)
+    course_code = Column(VARCHAR(32))
+    course_description = Column(VARCHAR(128))
 
     __table_args__ = (
         UniqueConstraint("term_id", "course_code", name="_term_id_course_code_constraint"),
@@ -71,7 +84,7 @@ class TBL_Class_Type(Base):
     __tablename__ = "tbl_classtype"
 
     class_type_id = Column(Integer, primary_key=True, autoincrement=True)
-    class_type = Column(VARCHAR)
+    class_type = Column(VARCHAR(128))
 
 
 class TBL_Course_Data(Base):
@@ -82,22 +95,22 @@ class TBL_Course_Data(Base):
     course_id = Column(Integer, ForeignKey("tbl_course.course_id"))
 
     # course reference number / crn
-    crn = Column(VARCHAR)
+    crn = Column(VARCHAR(32))
     # i'm not really sure what this actually is
     id = Column(Integer)
 
     # Biology II
-    course_title = Column(VARCHAR)
+    course_title = Column(VARCHAR(128))
     # BIOL
-    subject = Column(VARCHAR)
+    subject = Column(VARCHAR(128))
     # Biology
-    subject_long = Column(VARCHAR)
+    subject_long = Column(VARCHAR(128))
 
     # 001 / 002 / 003...; conerting to int so will need to pad 0 later if needed
-    sequence_number = Column(VARCHAR)
+    sequence_number = Column(VARCHAR(128))
 
     # which campus -> 'OT-North Oshawa'
-    campus_description = Column(VARCHAR)
+    campus_description = Column(VARCHAR(128))
 
     # lab, lecture, tutorial
     class_type = Column(Integer, ForeignKey("tbl_classtype.class_type_id"))
@@ -117,18 +130,18 @@ class TBL_Course_Data(Base):
     credit_hour_low = Column(Integer)
     # credit_hour_indicator = Column(VARCHAR)
     open_section = Column(Boolean)
-    link_identifier = Column(VARCHAR)
+    link_identifier = Column(VARCHAR(128))
     is_section_linked = Column(Boolean)
     # reserved_seat_summary = Column(VARCHAR)
     # section_attributes = Column(VARCHAR)
 
     # CLS -> In-Person
     # WB1 -> Virtual Meet Times
-    instructional_method = Column(VARCHAR)
+    instructional_method = Column(VARCHAR(128))
 
     # In-Person
     # Virtual Meet Times
-    instructional_method_description = Column(VARCHAR)
+    instructional_method_description = Column(VARCHAR(128))
 
     __table_args__ = (UniqueConstraint("course_id", "crn", name="_course_id_crn_constraint"),)
 
@@ -136,7 +149,7 @@ class TBL_Course_Data(Base):
 class TBL_Course_Faculty(Base):
     __tablename__ = "tbl_course_faculty"
 
-    course_id = Column(Integer, ForeignKey("tbl_course.course_id"), primary_key=True)
+    course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"), primary_key=True)
 
     faculty_id = Column(Integer, ForeignKey("tbl_faculty.faculty_id"), primary_key=True)
 
@@ -145,9 +158,9 @@ class TBL_Faculty(Base):
     __tablename__ = "tbl_faculty"
 
     faculty_id = Column(Integer, primary_key=True, autoincrement=True)
-    banner_id = Column(LargeBinary, unique=True)
-    instructor_name = Column(VARCHAR)
-    instructor_email = Column(VARCHAR)
+    banner_id = Column(BINARY(length=32), unique=True, nullable=False)
+    instructor_name = Column(VARCHAR(128))
+    instructor_email = Column(VARCHAR(128))
     instructor_rating = Column(Integer)
 
 
@@ -156,37 +169,60 @@ class TBL_Meeting(Base):
 
     meeting_id = Column(Integer, autoincrement=True, primary_key=True)
 
-    meeting_hash = Column(LargeBinary, unique=True)
+    meeting_hash = Column(BINARY(length=32), unique=True, nullable=False)
 
-    course_data_id = Column(VARCHAR, ForeignKey("tbl_course_data.course_data_id"))
+    course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"))
 
     term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
 
-    crn = Column(VARCHAR)
+    crn = Column(VARCHAR(32))
 
-    building = Column(VARCHAR)
-    building_description = Column(VARCHAR)
+    building = Column(VARCHAR(128))
+    building_description = Column(VARCHAR(128))
 
-    campus = Column(VARCHAR)
-    campus_description = Column(VARCHAR)
+    campus = Column(VARCHAR(128))
+    campus_description = Column(VARCHAR(128))
 
-    meeting_type = Column(VARCHAR)
-    meeting_type_description = Column(VARCHAR)
+    meeting_type = Column(VARCHAR(128))
+    meeting_type_description = Column(VARCHAR(128))
 
     start_date = Column(Date)
     end_date = Column(Date)
 
-    begin_time = Column(VARCHAR)
-    end_time = Column(VARCHAR)
+    begin_time = Column(VARCHAR(128))
+    end_time = Column(VARCHAR(128))
 
     days_of_week = Column(Integer)
 
-    room = Column(VARCHAR)
+    room = Column(VARCHAR(128))
 
-    category = Column(VARCHAR)
+    category = Column(VARCHAR(128))
     credit_hour_session = Column(Float)
     hours_week = Column(Float)
-    meeting_schedule_type = Column(VARCHAR)
+    meeting_schedule_type = Column(VARCHAR(128))
+
+
+def add_fac():
+    with Session.begin() as session:
+        banner_id = dataUtil.sha256_of_str("Hello world")
+        print(banner_id)
+        result = session.query(TBL_Faculty).filter_by(banner_id=banner_id).first()
+
+        if not result:
+            result = TBL_Faculty(
+                banner_id=banner_id,
+                instructor_name="displayName",
+                instructor_email="emailAddress",
+                instructor_rating=0,
+            )
+
+            print(result)
+            try:
+                session.add(result)
+                session.flush()
+            except Exception as e:
+                print(e)
+                raise e
 
 
 def get_class_type_from_str(value: str, session):
@@ -210,25 +246,33 @@ def add_terms(term_ids: list[int], term_descriptions: list[str]):
 
     with Session.begin() as session:
         for term_id, term_description in zip(term_ids, term_descriptions):
-            stmt = (
-                TBL_Term.__table__.insert()
-                .prefix_with("OR IGNORE")
-                .values(term_id=term_id, term_description=term_description)
-            )
-            session.execute(stmt)
+            term_id = int(term_id)
+
+            result = session.query(TBL_Term).filter_by(term_id=term_id).first()
+
+            if not result:
+                result = TBL_Term(
+                    term_id=term_id,
+                    term_description=term_description,
+                )
+
+                session.add(result)
 
         session.flush()
 
 
 def add_term_no_transaction(term_id: int, term_description: str, session: sessionmaker):
-    stmt = (
-        TBL_Term.__table__.insert()
-        .prefix_with("OR IGNORE")
-        .values(term_id=term_id, term_description=term_description)
-    )
-    session.execute(stmt)
+    result = session.query(TBL_Term).filter_by(term_id=term_id).first()
 
-    session.flush()
+    if not result:
+        result = TBL_Term(
+            term_id=int(term_id),
+            term_description=term_description,
+        )
+
+        session.add(result)
+
+        session.flush()
 
 
 def add_term(term_id: int, term_description: str):
@@ -297,7 +341,6 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
 
-
             result = (
                 session.query(TBL_Course_Data)
                 .filter_by(course_id=course_id)
@@ -306,7 +349,9 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
             )
 
             if result:
-                logger.info(f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']}")
+                logger.info(
+                    f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']}"
+                )
             else:
                 result = TBL_Course_Data(
                     # course code
@@ -364,8 +409,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
 
             for faculty in data["faculty"]:
                 _ = faculty["displayName"] + (faculty.get("emailAddress", "") or "")
-                banner_id = dataUtil.sha224_str(_)
-
+                banner_id = dataUtil.sha256_of_str(_)
                 result = session.query(TBL_Faculty).filter_by(banner_id=banner_id).first()
 
                 if not result:
@@ -381,13 +425,19 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
 
                 faculty_id = result.faculty_id
 
-                stmt = (
-                    TBL_Course_Faculty.__table__.insert()
-                    .prefix_with("OR IGNORE")
-                    .values(course_id=course_id, faculty_id=faculty_id)
+                result = (
+                    session.query(TBL_Course_Faculty)
+                    .filter_by(course_data_id=course_data_id)
+                    .filter_by(faculty_id=faculty_id)
+                    .first()
                 )
 
-                session.execute(stmt)
+                if not result:
+                    result = TBL_Course_Faculty(
+                        course_data_id=course_data_id, faculty_id=faculty_id
+                    )
+
+                    session.add(result)
 
             # session.flush()
 
@@ -415,8 +465,8 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     campus_description=useful_data["campusDescription"],
                     meeting_type=useful_data["meetingType"],
                     meeting_type_description=useful_data["meetingTypeDescription"],
-                    start_date=datetime.strptime(useful_data["startDate"], "%m/%d/%Y").date(),
-                    end_date=datetime.strptime(useful_data["endDate"], "%m/%d/%Y").date(),
+                    start_date=dataUtil.parse_date(useful_data["startDate"]),
+                    end_date=dataUtil.parse_date(useful_data["endDate"]),
                     begin_time=useful_data["beginTime"],
                     end_time=useful_data["endTime"],
                     days_of_week=dataUtil.get_weekdays_int(useful_data),
@@ -428,8 +478,8 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                 )
 
                 # we need to make our own unique identifier for the meeting
-                # so this is it, just all the data i figured was important 
-                meeting_hash = dataUtil.sha224_str(
+                # so this is it, just all the data i figured was important
+                meeting_hash = dataUtil.sha256_of_str(
                     f"{crn}{term_id}{to_insert.building}{to_insert.campus}{to_insert.meeting_type}"
                     f"{to_insert.start_date}{to_insert.end_date}{to_insert.begin_time}{to_insert.end_time}"
                     f"{to_insert.days_of_week}{to_insert.room}"
