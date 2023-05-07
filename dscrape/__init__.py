@@ -79,6 +79,7 @@ def main():
 
     started_at = dataUtil.time_now_precise()
     try:
+        database.get_current_scrape()
         # main2()
         # return
 

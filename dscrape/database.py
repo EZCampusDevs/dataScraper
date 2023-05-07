@@ -16,10 +16,16 @@ from sqlalchemy import (
 )
 from sqlalchemy import UniqueConstraint
 import os
-from datetime import datetime
+import datetime
 
 from . import dataUtil
 from . import logger
+
+
+class Scrape:
+
+    Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
+    Scrape_id   = -1
 
 Engine = None
 Session: sessionmaker = None
@@ -58,6 +64,13 @@ def init_database(
     Session = sessionmaker(bind=Engine)
     Base.metadata.bind = Engine
     Base.metadata.create_all(Engine)
+
+
+class TBL_Scrape_History(Base):
+    __tablename__ = "tbl_scrape_history"
+
+    scrape_id = Column(Integer, primary_key=True, autoincrement=True)
+    scrape_time = Column(TIMESTAMP)
 
 
 class TBL_Term(Base):
@@ -159,9 +172,11 @@ class TBL_Faculty(Base):
 
     faculty_id = Column(Integer, primary_key=True, autoincrement=True)
     banner_id = Column(BINARY(length=32), unique=True, nullable=False)
+    scrape_id = Column(Integer, ForeignKey("tbl_scrape_history.scrape_id"))
     instructor_name = Column(VARCHAR(128))
     instructor_email = Column(VARCHAR(128))
     instructor_rating = Column(Integer)
+
 
 
 class TBL_Meeting(Base):
@@ -174,6 +189,8 @@ class TBL_Meeting(Base):
     course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"))
 
     term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
+    
+    scrape_id = Column(Integer, ForeignKey("tbl_scrape_history.scrape_id"))
 
     crn = Column(VARCHAR(32))
 
@@ -200,29 +217,36 @@ class TBL_Meeting(Base):
     credit_hour_session = Column(Float)
     hours_week = Column(Float)
     meeting_schedule_type = Column(VARCHAR(128))
+    
+    
 
 
-def add_fac():
+
+def get_current_scrape():
+
+    if Scrape.Scrape_id != -1:
+        return Scrape.Scrape_id
+
+    logger.info("Inserting new scrape")
     with Session.begin() as session:
-        banner_id = dataUtil.sha256_of_str("Hello world")
-        print(banner_id)
-        result = session.query(TBL_Faculty).filter_by(banner_id=banner_id).first()
+
+        result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
 
         if not result:
-            result = TBL_Faculty(
-                banner_id=banner_id,
-                instructor_name="displayName",
-                instructor_email="emailAddress",
-                instructor_rating=0,
-            )
 
-            print(result)
-            try:
-                session.add(result)
-                session.flush()
-            except Exception as e:
-                print(e)
-                raise e
+            result = TBL_Scrape_History(
+                scrape_time=Scrape.Scrape_Time
+            ) 
+
+            session.add(result)
+            session.flush()
+
+        Scrape.Scrape_id = result.scrape_id
+
+        logger.info(f"Current Scrape ID: {Scrape.Scrape_id}")
+
+        return result.scrape_id
+
 
 
 def get_class_type_from_str(value: str, session):
@@ -418,6 +442,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                         instructor_name=faculty["displayName"],
                         instructor_email=faculty["emailAddress"],
                         instructor_rating=0,
+                        scrape_id = get_current_scrape()
                     )
 
                     session.add(result)
@@ -475,6 +500,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     credit_hour_session=useful_data["creditHourSession"],
                     hours_week=useful_data["hoursWeek"],
                     meeting_schedule_type=useful_data["meetingScheduleType"],
+                    scrape_id = get_current_scrape()
                 )
 
                 # we need to make our own unique identifier for the meeting
