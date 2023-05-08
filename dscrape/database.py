@@ -71,6 +71,7 @@ class TBL_Scrape_History(Base):
 
     scrape_id = Column(Integer, primary_key=True, autoincrement=True)
     scrape_time = Column(TIMESTAMP)
+    has_been_indexed = Column(Boolean)
 
 
 class TBL_Term(Base):
@@ -106,6 +107,8 @@ class TBL_Course_Data(Base):
     course_data_id = Column(Integer, autoincrement=True, primary_key=True)
 
     course_id = Column(Integer, ForeignKey("tbl_course.course_id"))
+
+    scrape_id = Column(Integer, ForeignKey("tbl_scrape_history.scrape_id"))
 
     # course reference number / crn
     crn = Column(VARCHAR(32))
@@ -190,7 +193,6 @@ class TBL_Meeting(Base):
 
     term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
     
-    scrape_id = Column(Integer, ForeignKey("tbl_scrape_history.scrape_id"))
 
     crn = Column(VARCHAR(32))
 
@@ -235,7 +237,8 @@ def get_current_scrape():
         if not result:
 
             result = TBL_Scrape_History(
-                scrape_time=Scrape.Scrape_Time
+                scrape_time=Scrape.Scrape_Time,
+                has_been_indexed=False
             ) 
 
             session.add(result)
@@ -380,6 +383,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                 result = TBL_Course_Data(
                     # course code
                     course_id=course_id,
+                        scrape_id = get_current_scrape(),
                     #
                     # i have no idea what this value means
                     id=data["id"],
@@ -442,7 +446,6 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                         instructor_name=faculty["displayName"],
                         instructor_email=faculty["emailAddress"],
                         instructor_rating=0,
-                        scrape_id = get_current_scrape()
                     )
 
                     session.add(result)
@@ -500,7 +503,6 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     credit_hour_session=useful_data["creditHourSession"],
                     hours_week=useful_data["hoursWeek"],
                     meeting_schedule_type=useful_data["meetingScheduleType"],
-                    scrape_id = get_current_scrape()
                 )
 
                 # we need to make our own unique identifier for the meeting
