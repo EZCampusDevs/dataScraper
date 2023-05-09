@@ -129,7 +129,7 @@ class TBL_Course_Data(Base):
     campus_description = Column(VARCHAR(128))
 
     # lab, lecture, tutorial
-    class_type = Column(Integer, ForeignKey("tbl_classtype.class_type_id"))
+    class_type_id = Column(Integer, ForeignKey("tbl_classtype.class_type_id"))
 
     credit_hours = Column(Integer)
     maximum_enrollment = Column(Integer)
@@ -254,10 +254,10 @@ def get_current_scrape():
 
 def get_class_type_from_str(value: str, session):
     # Try to find the class_type_id for the given value
-    class_type = session.query(TBL_Class_Type).filter_by(class_type=value).first()
+    class_type_id = session.query(TBL_Class_Type).filter_by(class_type=value).first()
 
-    if class_type is not None:
-        return class_type.class_type_id
+    if class_type_id is not None:
+        return class_type_id.class_type_id
 
     new_class_type = TBL_Class_Type(class_type=value)
     session.add(new_class_type)
@@ -405,7 +405,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                     campus_description=data["campusDescription"],
                     #
                     # Lecture, Laborator, Tutorial
-                    class_type=class_type_id,
+                    class_type_id=class_type_id,
                     #
                     credit_hours=data["creditHours"],
                     maximum_enrollment=data["maximumEnrollment"],
