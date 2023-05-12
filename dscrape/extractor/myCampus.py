@@ -24,7 +24,7 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 # this keeps the number of course codes in the url to this number
 # i haven't tested above 500, but my thought is upper limit of 1200 would be fine
 # this would double the speed because it would half the requests, higher this is the better
-COURSE_CODE_REQUEST_AMOUNT = 500
+COURSE_CODE_REQUEST_AMOUNT = 1000
 
 
 class CourseDumper(requester.Requester):
