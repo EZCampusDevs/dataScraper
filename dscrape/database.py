@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event
 from sqlalchemy import (
     Column,
+    Table,
     Integer,
     Boolean,
     TIMESTAMP,
@@ -222,7 +223,30 @@ class TBL_Meeting(Base):
     
     
 
-
+def drop_all():
+    db_names = [
+        TBL_Faculty.__tablename__,
+        TBL_Class_Type.__tablename__,
+        TBL_Course.__tablename__,
+        TBL_Course_Data.__tablename__,
+        TBL_Course_Faculty.__tablename__,
+        TBL_Scrape_History.__tablename__,
+        TBL_Meeting.__tablename__,
+        TBL_Term.__tablename__,
+        "tbl_word",
+        "tbl_word_course_data"
+    ]
+    for name in db_names:
+        for name in db_names:
+            try:
+                table = Table(name, Base.metadata, autoload=True)
+                table.drop(Engine)
+            except Exception as e:
+                if "referenced by a foreign key constraint" in str(e):
+                    continue
+                if "Unknown table" in str(e):
+                    continue
+                logger.warn(e) 
 
 def get_current_scrape():
 

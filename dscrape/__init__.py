@@ -1,6 +1,6 @@
 import traceback
 from datetime import datetime
-
+import json 
 from concurrent.futures import ThreadPoolExecutor
 
 from . import dataUtil
@@ -53,7 +53,19 @@ def scrape_course_information(dumper, debug_break_1=False):
                 course_data = course_data["data"]
                 course_data_str = str(course_data)[0:200]
                 logger.debug(f"Course data gotten: {course_data_str}")
-                database.add_course_data(i, course_data)
+
+
+                # NOTE: assuming course_code and i are in order (they should be), this works fine
+                #       otherwise we probably need to query the db for every course data we insert
+                course_id_map = { course_code : j for course_code, j in zip(course_code, i)}
+                proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
+
+                logger.info(f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}")
+
+                # with open("debug1.json", "w")as writer:
+                #     json.dump(proper_course_id, writer, indent=3)
+
+                database.add_course_data(proper_course_id, course_data)
 
             if debug_break_1:
                 logger.error("DEBUG BREAK")
@@ -99,4 +111,6 @@ def main2():
 
     # database.add_fac()
 
+#    database.drop_all()
+#
     scrape_course_information(dumper, debug_break_1=True)
