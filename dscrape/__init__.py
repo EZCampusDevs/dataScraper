@@ -1,6 +1,6 @@
 import traceback
+import sys 
 from datetime import datetime
-import json 
 from concurrent.futures import ThreadPoolExecutor
 
 from . import dataUtil
@@ -78,16 +78,51 @@ def scrape_course_information(dumper, debug_break_1=False):
         
 
 
+def parse_args(args):
+
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [OPTION]...",
+        add_help=False,
+    )
+
+    general = parser.add_argument_group("General Options")
+    general.add_argument(
+        "-h", "--help",
+        action="help",
+        help="Print this help message and exit",
+    )
+
+    general.add_argument(
+        "-c", "--clean",
+        dest="clean", action="store_true",
+        help="Delete the entire database"
+    )
+
+    return parser.parse_args(args)
+
+
 def main():
     logger.create_setup_logger(log_file="logs.log")
+
+    parsed_args = parse_args(sys.argv[1:])
+
+    logger.debug(parsed_args)
 
     database.init_database(
         use_mysql=True,
         database_host="localhost",
         database_name="hibernate_db",
         database_user="test",
-        database_pass="root"
+        database_pass="root",
+        create=not parsed_args.clean
     )
+
+    if parsed_args.clean:
+        if dataUtil.ask_for_confirmation("Are you sure you want to delete the entire database? "):
+            database.drop_all()
+        return
 
     started_at = dataUtil.time_now_precise()
     try:

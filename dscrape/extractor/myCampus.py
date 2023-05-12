@@ -164,6 +164,56 @@ class CourseDumper(requester.Requester):
             json.dump(course_data, writer, indent=3)
 
 
+    """
+    def __get_str_course_restrictions(self, crn: int) -> str:
+        if not isinstance(crn, int):
+            raise TypeError(f"crn expected {int}, received {type(crn)}")
+
+        session = requests.Session()
+
+        session.get(
+            url=f"https://{self.__domain}/StudentRegistrationSsb/ssb/term"
+                f"/termSelection?mode=search&mepCode={self.__mep_code}",
+            timeout=5
+        )
+
+        return session.get(
+            url=f"https://{self.__domain}/StudentRegistrationSsb/ssb"
+                f"/searchResults/getRestrictions?term={self.__term_id}"
+                f"&courseReferenceNumber={crn}",
+            timeout=5
+        ).text
+    def __decode_str_course_restrictions(self, html_text: str) -> dict:
+        html_cleaned_up_lines = re.findall(r"<span class=(.*?)</span>",
+                                           html_text)
+
+        restrictions = {}
+
+        for line in html_cleaned_up_lines:
+            line = self.__general_str_cleanup(line)
+
+            if "not all restrictions are applicable" in line.lower():
+                # Restrictions we specifically don't care about.
+                pass
+
+            elif "\"status-bold\">" in line:
+                # "\"status-bold\">" Is like the title header.
+                # Example: "Cannot be enrolled in one of the following Majors:".
+                restrictions[line.replace("\"status-bold\">", "")] = []
+                # Removed header and add line as a dict key with a value of [].
+
+            elif "\"detail-popup-indentation\">" in line:
+                # "\"detail-popup-indentation\">" Is like the detail header.
+                # For example: "Biological Science (BIOL)".
+                restrictions[list(restrictions.keys())[-1]].append(
+                    line.replace("\"detail-popup-indentation\">", "")
+                )
+                # Removed header and add cleaned up line to the last dict key.
+
+        return restrictions
+
+"""
+
 class UOIT_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("ssp.mycampus.ca", "UOIT", retries, timeout)

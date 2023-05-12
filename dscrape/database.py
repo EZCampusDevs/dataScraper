@@ -41,6 +41,7 @@ def init_database(
     database_user="test",
     database_pass="root",
     database_directory="./",
+    create=True
 ):
     global Engine, Session, Base
 
@@ -64,8 +65,8 @@ def init_database(
 
     Session = sessionmaker(bind=Engine)
     Base.metadata.bind = Engine
-    Base.metadata.create_all(Engine)
-
+    if create:
+        create_all()
 
 class TBL_Scrape_History(Base):
     __tablename__ = "tbl_scrape_history"
@@ -212,6 +213,8 @@ class TBL_Meeting(Base):
     begin_time = Column(VARCHAR(128))
     end_time = Column(VARCHAR(128))
 
+    time_delta = Column(Integer)
+
     days_of_week = Column(Integer)
 
     room = Column(VARCHAR(128))
@@ -222,6 +225,8 @@ class TBL_Meeting(Base):
     meeting_schedule_type = Column(VARCHAR(128))
     
     
+def create_all():
+    Base.metadata.create_all(Engine)
 
 def drop_all():
     db_names = [
@@ -239,7 +244,7 @@ def drop_all():
     for name in db_names:
         for name in db_names:
             try:
-                table = Table(name, Base.metadata, autoload=True)
+                table = Table(name, Base.metadata)
                 table.drop(Engine)
             except Exception as e:
                 if "referenced by a foreign key constraint" in str(e):
@@ -505,19 +510,28 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
 
                 add_term_no_transaction(term_id, "UNKNOWN AT TIME OF ADDING", session)
 
+                start_date = dataUtil.parse_date(useful_data["startDate"])
+                end_date = dataUtil.parse_date(useful_data["endDate"])
+
+                if start_date == end_date:
+                    time_delta_days = 0
+                else:
+                    time_delta_days = 7
+
                 to_insert = TBL_Meeting(
                     meeting_hash=b"",
                     course_data_id=course_data_id,
                     crn=crn,
                     term_id=term_id,
+                    time_delta=time_delta_days,
                     building=useful_data["building"],
                     building_description=useful_data["buildingDescription"],
                     campus=useful_data["campus"],
                     campus_description=useful_data["campusDescription"],
                     meeting_type=useful_data["meetingType"],
                     meeting_type_description=useful_data["meetingTypeDescription"],
-                    start_date=dataUtil.parse_date(useful_data["startDate"]),
-                    end_date=dataUtil.parse_date(useful_data["endDate"]),
+                    start_date=start_date,
+                    end_date=end_date,
                     begin_time=useful_data["beginTime"],
                     end_time=useful_data["endTime"],
                     days_of_week=dataUtil.get_weekdays_int(useful_data),

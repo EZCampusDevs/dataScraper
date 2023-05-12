@@ -119,3 +119,13 @@ def parse_date(date: str):
         raise e
 
 
+def ask_for_confirmation(prompt: str):
+
+    while True:
+
+        i = input(prompt + " (y/n): ")
+
+        if i in ("yes", "y", "confirm"):
+            return True
+        elif i in ("no", "n", "deny"):
+            return False 
