@@ -387,7 +387,6 @@ def add_course(term_id: int, course_code: str, course_description: str):
 def add_course_data(course_ids: list[int], datas: list[dict[str]]):
     with Session.begin() as session:
         for course_id, data in zip(course_ids, datas):
-            logger.debug(f"Adding: {course_id}'s data to the database")
 
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
@@ -401,7 +400,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
 
             if result:
                 logger.info(
-                    f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']}"
+                    f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database!"
                 )
             else:
                 result = TBL_Course_Data(
