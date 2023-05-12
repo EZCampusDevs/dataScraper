@@ -1,0 +1,3 @@
+[submodule "core_backend"]
+	path = core_backend
+	url = https://github.com/EZCampusDevs/core_backend.git
