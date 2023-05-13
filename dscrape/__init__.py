@@ -58,6 +58,7 @@ def scrape_course_information(dumper, debug_break_1=False):
                 #       otherwise we probably need to query the db for every course data we insert
                 course_id_map = {course_code: j for course_code, j in zip(course_code, i)}
                 proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
+                #restrictions = [dumper.get_course_restrictions(id, i['courseReferenceNumber']) for i in course_data]
 
                 logger.info(
                     f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}"
@@ -67,6 +68,8 @@ def scrape_course_information(dumper, debug_break_1=False):
                 #     json.dump(proper_course_id, writer, indent=3)
 
                 database.add_course_data(proper_course_id, course_data)
+                # database.add_course_data(proper_course_id, course_data, restrictions)
+                
 
             if debug_break_1:
                 logger.error("DEBUG BREAK")
@@ -144,32 +147,6 @@ def main():
 
 def main2():
     dumper = extractor.myCampus.UOIT_Dumper
-    d_instance = dumper()
-
-    terms = d_instance.get_json_terms()
-    term_id = [i["code"] for i in terms]
-    term_id = term_id[0]
-
-    logger.debug(term_id)
-    course_codes = d_instance.get_json_course_codes(term_id)
-
-    course_code = [i["code"] for i in course_codes]
-
-    for course_data in d_instance.get_json_course_data(term_id, course_code):
-        # logger.debug(course_data)
-
-        course_data = course_data["data"]
-
-        for course in course_data:
-
-
-            crn = course["courseReferenceNumber"]
-            text = d_instance.get_course_restrictions(term_id, crn)
-
-            logger.info(text)
-
-        return
-
     # database.add_fac()
 
     #    database.drop_all()

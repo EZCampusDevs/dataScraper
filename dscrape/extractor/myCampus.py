@@ -12,6 +12,8 @@ from .. import logger
 
 to check out the site for uoit use this link:
 https://ssp.mycampus.ca/StudentRegistrationSsb/ssb/term/termSelection?mode=search&mepCode=UOIT
+
+https://ssp.mycampus.ca/StudentRegistrationSsb/ssb/classSearch/get_subject?searchTerm=&term=202301&offset=1&max=10&uniqueSessionId=u4mu81683951275268&_=1683951724127
 """
 
 MAX_COUNT = 9999999
@@ -35,10 +37,14 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 # this keeps the number of course codes in the url to this number
 # i haven't tested above 500, but my thought is upper limit of 1200 would be fine
 # this would double the speed because it would half the requests, higher this is the better
-COURSE_CODE_REQUEST_AMOUNT = 1000
+# UPDATE: 1000 is too long, must be lower than that
+# NOTE: url should be less than 8000 characters, otherwise server will drop it 
+COURSE_CODE_REQUEST_AMOUNT = 700 
+
 
 
 MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
+MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
 
 class CourseDumper(requester.Requester):
     def __init__(
@@ -192,8 +198,15 @@ class CourseDumper(requester.Requester):
                 else:
                     current = []
                     restrictions[group] = current
-        
-                continue
+
+            elif MATCHES_RESTRICTION_SPECIAL.match(i.text):
+
+                    s = "special"
+                    if s in restrictions:
+                        current = restrictions[s]
+                    else:
+                        current = []
+                        restrictions[s] = current
 
             elif current is not None and "detail-popup-indentation" in i["class"]:
                 current.append({

@@ -224,6 +224,28 @@ class TBL_Meeting(Base):
     meeting_schedule_type = Column(VARCHAR(128))
 
 
+class TBL_Restriction_Type(Base):
+    __tablename__ = "tbl_restriction_type"
+
+    restriction_type_id = Column(Integer, primary_key=True, autoincrement=True)
+    restriction_type = Column(VARCHAR(128))
+
+class TBL_Restriction(Base):
+    __tablename__ = "tbl_restriction"
+
+    restriction_id = Column(Integer, primary_key=True, autoincrement=True)
+    restriction = Column(VARCHAR(128))
+    must_be_in = Column(Boolean)
+    
+    restriction_type = Column(Integer, ForeignKey("tbl_restriction_type.restriction_type_id"))
+
+class TBL_Course_Restriction(Base):
+    __tablename__ = "tbl_course_restriction"
+
+    course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"), primary_key=True)
+    restriction_id = Column(Integer,  ForeignKey("tbl_restriction.restriction_id"), primary_key=True)
+
+
 def create_all():
     Base.metadata.create_all(Engine)
 
@@ -273,6 +295,22 @@ def get_current_scrape():
         logger.info(f"Current Scrape ID: {Scrape.Scrape_id}")
 
         return result.scrape_id
+
+
+def get_restriction_type_from_str(value: str, session):
+    # Try to find the class_type_id for the given value
+    restriction_type_id = session.query(TBL_Restriction_Type).filter_by(restriction_type=value).first()
+
+    if restriction_type_id is not None:
+        return restriction_type_id.restriction_type_id
+
+    new_class_type = TBL_Restriction_Type(restriction_type=value)
+    session.add(new_class_type)
+
+    session.flush()
+
+    return new_class_type.restriction_type_id
+
 
 
 def get_class_type_from_str(value: str, session):
@@ -383,9 +421,22 @@ def add_course(term_id: int, course_code: str, course_description: str):
         return result.course_code
 
 
-def add_course_data(course_ids: list[int], datas: list[dict[str]]):
+def add_course_data(course_ids: list[int], datas: list[dict[str]], restrictions: list[dict[str]] = None):
+
+
+    if len(course_ids) != len(datas):
+        raise Exception("The length of course_ids must match the length of datas")
+
+    if restrictions and len(restrictions) != len(datas):
+        raise Exception("The length of restrictions must match the length of datas")
+
+    if not restrictions:
+
+        restrictions = [None for i in range(len(course_ids))]
+
+
     with Session.begin() as session:
-        for course_id, data in zip(course_ids, datas):
+        for course_id, data, restriction in zip(course_ids, datas, restrictions):
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
 
@@ -550,4 +601,47 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                 if not result:
                     session.add(to_insert)
 
+            if restriction:
+
+                add_restriction_nt(course_data_id, restriction, session)
+
+            
+
         session.flush()
+
+
+def add_restriction_nt(course_data_id: int, restriction: dict[str, list[dict[str, bool]]], session):
+
+
+    for key, value in restriction.items():
+
+        restriction_type_id = get_restriction_type_from_str(key, session) 
+
+        for rest in value:
+
+            result = session.query(TBL_Restriction).filter_by(restriction=rest['value']).first()
+
+
+            if not result:
+
+                result = TBL_Restriction(
+                    restriction=rest['value'],
+                    must_be_in=rest['must_be_in'],
+                    restriction_type=restriction_type_id
+                )
+
+                session.add(result)
+                session.flush()
+
+            mapping = session.query(TBL_Course_Restriction).filter_by(restriction_id=result.restriction_id).filter_by(course_data_id=course_data_id).first()
+
+            if not mapping:
+
+                mapping = TBL_Course_Restriction(
+                    restriction_id=result.restriction_id,
+                    course_data_id=course_data_id
+                )
+                session.add(mapping)
+                session.flush()
+
+

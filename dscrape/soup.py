@@ -24,6 +24,7 @@ MATCHES_LEVELS = re.compile("^must\s*be.*following\s*levels:?$", re.IGNORECASE)
 MATCHES_DEGREE = re.compile("^must\s*be.*following\s*degrees:?$", re.IGNORECASE)
 
 MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
+MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
 
 
 restrictions ={}
@@ -44,6 +45,16 @@ for i in spans:
             current = []
             restrictions[group] = current
         
+        continue
+
+    elif MATCHES_RESTRICTION_SPECIAL.match(i.text):
+
+        s = "special"
+        if s in restrictions:
+            current = restrictions[s]
+        else:
+            current = []
+            restrictions[s] = current
         continue
 
     elif current is not None and "detail-popup-indentation" in i["class"]:
