@@ -1,5 +1,5 @@
 import traceback
-import sys 
+import sys
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
@@ -54,13 +54,14 @@ def scrape_course_information(dumper, debug_break_1=False):
                 course_data_str = str(course_data)[0:200]
                 logger.debug(f"Course data gotten: {course_data_str}")
 
-
                 # NOTE: assuming course_code and i are in order (they should be), this works fine
                 #       otherwise we probably need to query the db for every course data we insert
-                course_id_map = { course_code : j for course_code, j in zip(course_code, i)}
+                course_id_map = {course_code: j for course_code, j in zip(course_code, i)}
                 proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
 
-                logger.info(f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}")
+                logger.info(
+                    f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}"
+                )
 
                 # with open("debug1.json", "w")as writer:
                 #     json.dump(proper_course_id, writer, indent=3)
@@ -75,11 +76,9 @@ def scrape_course_information(dumper, debug_break_1=False):
         logger.error("Unknown error has occured!")
         logger.error(e)
         logger.error(traceback.format_exc())
-        
 
 
 def parse_args(args):
-
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -89,17 +88,17 @@ def parse_args(args):
 
     general = parser.add_argument_group("General Options")
     general.add_argument(
-        "-h", "--help",
+        "-h",
+        "--help",
         action="help",
         help="Print this help message and exit",
     )
-
     general.add_argument(
-        "-c", "--clean",
-        dest="clean", action="store_true",
-        help="Delete the entire database"
+        "-c", "--clean", dest="clean", action="store_true", help="Delete the entire database"
     )
-
+    general.add_argument(
+        "-d", "--debug", dest="debug", action="store_true", help="Run the debug main method"
+    )
     return parser.parse_args(args)
 
 
@@ -116,7 +115,7 @@ def main():
         database_name="hibernate_db",
         database_user="test",
         database_pass="root",
-        create=not parsed_args.clean
+        create=not parsed_args.clean,
     )
 
     if parsed_args.clean:
@@ -127,8 +126,10 @@ def main():
     started_at = dataUtil.time_now_precise()
     try:
         database.get_current_scrape()
-        # main2()
-        # return
+
+        if parsed_args.debug:
+            main2()
+            return
 
         with ThreadPoolExecutor(max_workers=5) as pool:
             pool.map(scrape_course_information, extractor.extractors)
@@ -143,9 +144,34 @@ def main():
 
 def main2():
     dumper = extractor.myCampus.UOIT_Dumper
+    d_instance = dumper()
+
+    terms = d_instance.get_json_terms()
+    term_id = [i["code"] for i in terms]
+    term_id = term_id[0]
+
+    logger.debug(term_id)
+    course_codes = d_instance.get_json_course_codes(term_id)
+
+    course_code = [i["code"] for i in course_codes]
+
+    for course_data in d_instance.get_json_course_data(term_id, course_code):
+        # logger.debug(course_data)
+
+        course_data = course_data["data"]
+
+        for course in course_data:
+
+
+            crn = course["courseReferenceNumber"]
+            text = d_instance.get_course_restrictions(term_id, crn)
+
+            logger.info(text)
+
+        return
 
     # database.add_fac()
 
-#    database.drop_all()
-#
+    #    database.drop_all()
+    #
     scrape_course_information(dumper, debug_break_1=True)

@@ -1,13 +1,14 @@
 import time
 import hashlib
 import traceback
-from datetime import datetime 
+from datetime import datetime
 
 import dateutil.parser as datePasrer
 
 
 from . import constants
 from . import logger
+
 
 def time_now_precise():
     return time.perf_counter()
@@ -95,19 +96,16 @@ def get_weekdays_int_bad(data: dict[str, bool]):
     return value
 
 
-
-
 def parse_date(date: str):
-
-    try: 
-        return datetime.strptime(date, "%m/%d/%Y").date() 
+    try:
+        return datetime.strptime(date, "%m/%d/%Y").date()
     except ValueError:
-        pass  
+        pass
 
-    try: 
-        return datetime.strptime(date, "%b %d, %Y").date() 
+    try:
+        return datetime.strptime(date, "%b %d, %Y").date()
     except ValueError:
-        pass  
+        pass
 
     try:
         return datePasrer.parse(date).date()
@@ -115,17 +113,15 @@ def parse_date(date: str):
     except Exception as e:
         logger.error(e)
         logger.error(traceback.format_exc())
-        
+
         raise e
 
 
 def ask_for_confirmation(prompt: str):
-
     while True:
-
         i = input(prompt + " (y/n): ")
 
         if i in ("yes", "y", "confirm"):
             return True
         elif i in ("no", "n", "deny"):
-            return False 
+            return False

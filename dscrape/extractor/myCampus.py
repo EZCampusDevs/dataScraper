@@ -1,9 +1,18 @@
 import json
 
+from bs4 import BeautifulSoup
+import re
+
 from ..downloader import requester
 from .. import dataUtil as DU
 from .. import logger
 
+
+"""
+
+to check out the site for uoit use this link:
+https://ssp.mycampus.ca/StudentRegistrationSsb/ssb/term/termSelection?mode=search&mepCode=UOIT
+"""
 
 MAX_COUNT = 9999999
 
@@ -14,6 +23,8 @@ TERM_SEARCH_AUTH_URL = (
     "https://{HOST}/StudentRegistrationSsb/ssb/term/search?mode=search&term={TERM}"
 )
 TERM_SEARCH_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/classSearch/getTerms?searchTerm=&offset=1&max={MAX_COUNT}"
+
+TERM_SEARCH_GET_RESTRICTION = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/getRestrictions?term={TERM}&courseReferenceNumber={CRN}"
 
 COURSE_CODES_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/classSearch/get_subjectcoursecombo?searchTerm={SEARCH}&term={TERM_ID}&offset=1&max={MAX_COUNT}"
 
@@ -26,6 +37,8 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 # this would double the speed because it would half the requests, higher this is the better
 COURSE_CODE_REQUEST_AMOUNT = 1000
 
+
+MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
 
 class CourseDumper(requester.Requester):
     def __init__(
@@ -81,7 +94,9 @@ class CourseDumper(requester.Requester):
 
         return {}
 
-    def get_json_course_codes(self, term_id: str, search_code: str, max_count: int = MAX_COUNT):
+    def get_json_course_codes(
+        self, term_id: str, search_code: str = "", max_count: int = MAX_COUNT
+    ):
         self.auth_terms()
 
         url = COURSE_CODES_GET_URL.format(
@@ -142,6 +157,55 @@ class CourseDumper(requester.Requester):
 
         return {}
 
+    def get_course_restrictions(self, term: int, crn: int) -> bytes:
+        self.auth_terms()
+
+        url = TERM_SEARCH_GET_RESTRICTION.format(HOST=self.hostname, TERM=term, CRN=crn)
+        r = self.request("get", url)
+
+        if r.status_code != 200:
+            return {
+                "levels" : [],
+                "degrees" : []
+            }
+
+        j = r.content
+
+        page = BeautifulSoup(j, "html.parser")
+        spans = page.find_all("span")
+
+        
+        restrictions ={}
+        current = None
+        must_be_in = False
+        for i in spans:
+
+            m = MATCHES_RESTRICTION_GROUP.match(i.text)
+
+            if m:
+                must_be_in = m.group(1).lower() == "must"
+                group = m.group(2).lower()
+
+                if group in restrictions:
+                    current = restrictions[group] 
+
+                else:
+                    current = []
+                    restrictions[group] = current
+        
+                continue
+
+            elif current is not None and "detail-popup-indentation" in i["class"]:
+                current.append({
+                    "value": i.text,
+                    "must_be_in" : must_be_in })
+            else:
+                if i.text == "Not all restrictions are applicable.":
+                    continue
+                logger.warn(f"Unknown span while parsing restrictions: {i}")
+
+        return restrictions 
+
     def scrape_and_dump(self):
         print("getting terms...")
         terms = self.get_json_terms()
@@ -163,6 +227,7 @@ class CourseDumper(requester.Requester):
         with open(self.mep_code + "-course_code_data.json", "w") as writer:
             json.dump(course_data, writer, indent=3)
 
+        return
 
     """
     def __get_str_course_restrictions(self, crn: int) -> str:
@@ -213,6 +278,7 @@ class CourseDumper(requester.Requester):
         return restrictions
 
 """
+
 
 class UOIT_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:

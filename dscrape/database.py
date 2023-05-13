@@ -24,9 +24,9 @@ from . import logger
 
 
 class Scrape:
-
     Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
-    Scrape_id   = -1
+    Scrape_id = -1
+
 
 Engine = None
 Session: sessionmaker = None
@@ -41,7 +41,7 @@ def init_database(
     database_user="test",
     database_pass="root",
     database_directory="./",
-    create=True
+    create=True,
 ):
     global Engine, Session, Base
 
@@ -67,6 +67,7 @@ def init_database(
     Base.metadata.bind = Engine
     if create:
         create_all()
+
 
 class TBL_Scrape_History(Base):
     __tablename__ = "tbl_scrape_history"
@@ -183,7 +184,6 @@ class TBL_Faculty(Base):
     instructor_rating = Column(Integer)
 
 
-
 class TBL_Meeting(Base):
     __tablename__ = "tbl_meeting"
 
@@ -194,7 +194,6 @@ class TBL_Meeting(Base):
     course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"))
 
     term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
-    
 
     crn = Column(VARCHAR(32))
 
@@ -223,10 +222,11 @@ class TBL_Meeting(Base):
     credit_hour_session = Column(Float)
     hours_week = Column(Float)
     meeting_schedule_type = Column(VARCHAR(128))
-    
-    
+
+
 def create_all():
     Base.metadata.create_all(Engine)
+
 
 def drop_all():
     db_names = [
@@ -239,7 +239,7 @@ def drop_all():
         TBL_Meeting.__tablename__,
         TBL_Term.__tablename__,
         "tbl_word",
-        "tbl_word_course_data"
+        "tbl_word_course_data",
     ]
     for name in db_names:
         for name in db_names:
@@ -251,24 +251,19 @@ def drop_all():
                     continue
                 if "Unknown table" in str(e):
                     continue
-                logger.warn(e) 
+                logger.warn(e)
+
 
 def get_current_scrape():
-
     if Scrape.Scrape_id != -1:
         return Scrape.Scrape_id
 
     logger.info("Inserting new scrape")
     with Session.begin() as session:
-
         result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
 
         if not result:
-
-            result = TBL_Scrape_History(
-                scrape_time=Scrape.Scrape_Time,
-                has_been_indexed=False
-            ) 
+            result = TBL_Scrape_History(scrape_time=Scrape.Scrape_Time, has_been_indexed=False)
 
             session.add(result)
             session.flush()
@@ -278,7 +273,6 @@ def get_current_scrape():
         logger.info(f"Current Scrape ID: {Scrape.Scrape_id}")
 
         return result.scrape_id
-
 
 
 def get_class_type_from_str(value: str, session):
@@ -392,7 +386,6 @@ def add_course(term_id: int, course_code: str, course_description: str):
 def add_course_data(course_ids: list[int], datas: list[dict[str]]):
     with Session.begin() as session:
         for course_id, data in zip(course_ids, datas):
-
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
 
@@ -411,7 +404,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]]):
                 result = TBL_Course_Data(
                     # course code
                     course_id=course_id,
-                        scrape_id = get_current_scrape(),
+                    scrape_id=get_current_scrape(),
                     #
                     # i have no idea what this value means
                     id=data["id"],
