@@ -260,6 +260,9 @@ def drop_all():
         TBL_Scrape_History.__tablename__,
         TBL_Meeting.__tablename__,
         TBL_Term.__tablename__,
+        TBL_Course_Restriction.__tablename__,
+        TBL_Restriction.__tablename__,
+        TBL_Restriction_Type.__tablename__,
         "tbl_word",
         "tbl_word_course_data",
     ]
