@@ -2,10 +2,13 @@ import json
 
 from bs4 import BeautifulSoup
 import re
+from datetime import datetime
 
-from ..downloader import requester
+from .common import CourseScraper
+
 from .. import dataUtil as DU
 from .. import logger
+from .. import database
 
 
 """
@@ -46,7 +49,7 @@ COURSE_CODE_REQUEST_AMOUNT = 700
 MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
 MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
 
-class CourseDumper(requester.Requester):
+class CourseDumper(CourseScraper):
     def __init__(
         self,
         hostname: str,
@@ -219,7 +222,7 @@ class CourseDumper(requester.Requester):
 
         return restrictions 
 
-    def scrape_and_dump(self):
+    def __depricated__scrape_and_dump(self):
         print("getting terms...")
         terms = self.get_json_terms()
 
@@ -242,55 +245,73 @@ class CourseDumper(requester.Requester):
 
         return
 
-    """
-    def __get_str_course_restrictions(self, crn: int) -> str:
-        if not isinstance(crn, int):
-            raise TypeError(f"crn expected {int}, received {type(crn)}")
 
-        session = requests.Session()
 
-        session.get(
-            url=f"https://{self.__domain}/StudentRegistrationSsb/ssb/term"
-                f"/termSelection?mode=search&mepCode={self.__mep_code}",
-            timeout=5
-        )
+    def scrape_and_dump(self, debug_break_1=False):
 
-        return session.get(
-            url=f"https://{self.__domain}/StudentRegistrationSsb/ssb"
-                f"/searchResults/getRestrictions?term={self.__term_id}"
-                f"&courseReferenceNumber={crn}",
-            timeout=5
-        ).text
-    def __decode_str_course_restrictions(self, html_text: str) -> dict:
-        html_cleaned_up_lines = re.findall(r"<span class=(.*?)</span>",
-                                           html_text)
+        terms = self.get_json_terms()
 
-        restrictions = {}
+        logger.info(f"Scraping using dumper: {self}")
 
-        for line in html_cleaned_up_lines:
-            line = self.__general_str_cleanup(line)
+        term_id = [i["code"] for i in terms]
+        term_desc = [i["description"] for i in terms]
 
-            if "not all restrictions are applicable" in line.lower():
-                # Restrictions we specifically don't care about.
-                pass
+        logger.info(f"Found term {term_id}")
 
-            elif "\"status-bold\">" in line:
-                # "\"status-bold\">" Is like the title header.
-                # Example: "Cannot be enrolled in one of the following Majors:".
-                restrictions[line.replace("\"status-bold\">", "")] = []
-                # Removed header and add line as a dict key with a value of [].
+        database.add_terms(term_id, term_desc)
 
-            elif "\"detail-popup-indentation\">" in line:
-                # "\"detail-popup-indentation\">" Is like the detail header.
-                # For example: "Biological Science (BIOL)".
-                restrictions[list(restrictions.keys())[-1]].append(
-                    line.replace("\"detail-popup-indentation\">", "")
+        currentYear = (datetime.now().year - 1) * 100
+        logger.info(f"Current term year: {currentYear}")
+
+        for id in term_id:
+            if int(id) < currentYear:
+                logger.info(f"Skipping term {id} because it should be out of date")
+                continue
+
+            logger.info(f"Fetching term {id}")
+            course_codes = self.get_json_course_codes(id, "")
+
+            course_code = [i["code"] for i in course_codes]
+            course_desc = [i["description"] for i in course_codes]
+
+            logger.debug(f"Got course codes {course_code}")
+
+            i = database.add_courses(
+                [id for i in range(len(course_desc))], course_code, course_desc
+            )
+
+            logger.info(f"Fetching course data for term and {len(course_code)} courses")
+            for course_data in self.get_json_course_data(id, course_code):
+                if not course_data:
+                    logger.info("Could not get course data")
+                    continue
+
+                course_data = course_data["data"]
+                course_data_str = str(course_data)[0:200]
+                logger.debug(f"Course data gotten: {course_data_str}")
+
+                # NOTE: assuming course_code and i are in order (they should be), this works fine
+                #       otherwise we probably need to query the db for every course data we insert
+                course_id_map = {course_code: j for course_code, j in zip(course_code, i)}
+                proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
+                #restrictions = [dumper.get_course_restrictions(id, i['courseReferenceNumber']) for i in course_data]
+
+                logger.info(
+                    f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}"
                 )
-                # Removed header and add cleaned up line to the last dict key.
 
-        return restrictions
+                # with open("debug1.json", "w")as writer:
+                #     json.dump(proper_course_id, writer, indent=3)
 
-"""
+                database.add_course_data(proper_course_id, course_data)
+                # database.add_course_data(proper_course_id, course_data, restrictions)
+                
+
+            if debug_break_1:
+                logger.error("DEBUG BREAK")
+                return
+
+
 
 
 class UOIT_Dumper(CourseDumper):

@@ -1,7 +1,8 @@
 import traceback
+import os 
 import sys
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
 
 from . import dataUtil
 from . import extractor
@@ -9,71 +10,12 @@ from . import database
 from . import logger
 
 
-def scrape_course_information(dumper, debug_break_1=False):
+def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=False):
     try:
+        
         dumper = dumper()
 
-        terms = dumper.get_json_terms()
-
-        logger.info(f"Scraping using dumper: {dumper}")
-
-        term_id = [i["code"] for i in terms]
-        term_desc = [i["description"] for i in terms]
-
-        logger.info(f"Found term {term_id}")
-
-        database.add_terms(term_id, term_desc)
-
-        currentYear = (datetime.now().year - 1) * 100
-        logger.info(f"Current term year: {currentYear}")
-
-        for id in term_id:
-            if int(id) < currentYear:
-                logger.info(f"Skipping term {id} because it should be out of date")
-                continue
-
-            logger.info(f"Fetching term {id}")
-            course_codes = dumper.get_json_course_codes(id, "")
-
-            course_code = [i["code"] for i in course_codes]
-            course_desc = [i["description"] for i in course_codes]
-
-            logger.debug(f"Got course codes {course_code}")
-
-            i = database.add_courses(
-                [id for i in range(len(course_desc))], course_code, course_desc
-            )
-
-            logger.info(f"Fetching course data for term and {len(course_code)} courses")
-            for course_data in dumper.get_json_course_data(id, course_code):
-                if not course_data:
-                    logger.info("Could not get course data")
-                    continue
-
-                course_data = course_data["data"]
-                course_data_str = str(course_data)[0:200]
-                logger.debug(f"Course data gotten: {course_data_str}")
-
-                # NOTE: assuming course_code and i are in order (they should be), this works fine
-                #       otherwise we probably need to query the db for every course data we insert
-                course_id_map = {course_code: j for course_code, j in zip(course_code, i)}
-                proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
-                #restrictions = [dumper.get_course_restrictions(id, i['courseReferenceNumber']) for i in course_data]
-
-                logger.info(
-                    f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}"
-                )
-
-                # with open("debug1.json", "w")as writer:
-                #     json.dump(proper_course_id, writer, indent=3)
-
-                database.add_course_data(proper_course_id, course_data)
-                # database.add_course_data(proper_course_id, course_data, restrictions)
-                
-
-            if debug_break_1:
-                logger.error("DEBUG BREAK")
-                return
+        dumper.scrape_and_dump(debug_break_1)
 
     except Exception as e:
         logger.error("Unknown error has occured!")
@@ -102,22 +44,67 @@ def parse_args(args):
     general.add_argument(
         "-d", "--debug", dest="debug", action="store_true", help="Run the debug main method"
     )
+    general.add_argument(
+        "-p", "--password", dest="password", help="The database password"
+    )
+    general.add_argument(
+        "-u", "--username", dest="username", help="The database username"
+    )
+    general.add_argument(
+        "-H", "--host", dest="host", help="The database host"
+    )
+    general.add_argument(
+        "-n", "--db_name", dest="db_name", help="The database name"
+    )
+    general.add_argument(
+        "-P", "--port", dest="db_port", help="The database port"
+    )
     return parser.parse_args(args)
 
 
 def main():
     logger.create_setup_logger(log_file="logs.log")
 
+    load_dotenv()
+
     parsed_args = parse_args(sys.argv[1:])
 
-    logger.debug(parsed_args)
+    if parsed_args.password:
+        _ = parsed_args.password
+        parsed_args.password = "*"*len(_)
+        logger.debug(parsed_args)
+        parsed_args.password = _ 
+    else:
+        logger.debug(parsed_args)
+
+    if not parsed_args.db_name:
+        parsed_args.db_name = str(os.getenv("db_name", "hibernate_db"))
+
+    if not parsed_args.host:
+        parsed_args.host = str(os.getenv("host", "localhost"))
+
+    if not parsed_args.password:
+        parsed_args.password = str(os.getenv("password", "root"))
+
+    if not parsed_args.username:
+        parsed_args.username = str(os.getenv("username", "test"))
+
+    if not parsed_args.db_port:
+        parsed_args.db_port = int(os.getenv("db_port", 3306))
+
+    logger.info(f"Read hostname {parsed_args.host}")
+    logger.info(f"Read port {parsed_args.db_port}")
+    logger.info(f"Read database name {parsed_args.db_name}")
+    logger.info(f"Read username {parsed_args.username}")
+    logger.info(f"Read password {'*'*len(parsed_args.password)}")
 
     database.init_database(
         use_mysql=True,
-        database_host="localhost",
-        database_name="hibernate_db",
-        database_user="test",
-        database_pass="root",
+        database_port=parsed_args.db_port,
+        database_host=parsed_args.host,
+        database_name=parsed_args.db_name,
+        database_user=parsed_args.username,
+        database_pass=parsed_args.password,
         create=not parsed_args.clean,
     )
 
@@ -151,4 +138,4 @@ def main2():
 
     #    database.drop_all()
     #
-    scrape_course_information(dumper, debug_break_1=True)
+    # scrape_course_information(dumper, debug_break_1=True)
