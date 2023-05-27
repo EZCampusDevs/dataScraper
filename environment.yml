@@ -1,0 +1,12 @@
+name: dscrape
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - conda==23.3.1
+  - SQLAlchemy=2
+  - requests=2
+  - mysql-connector-python=8
+  - python-dateutil=2.8
+  - beautifulsoup4=4.12
