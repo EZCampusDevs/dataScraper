@@ -137,7 +137,7 @@ class TBL_Course_Data(Base):
     credit_hours = Column(Integer)
     maximum_enrollment = Column(Integer)
     enrollment = Column(Integer)
-    seats_vailable = Column(Integer)
+    seats_available = Column(Integer)
     wait_capacity = Column(Integer)
     wait_count = Column(Integer)
     wait_available = Column(Integer)
@@ -485,7 +485,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]], restrictions:
                     credit_hours=data["creditHours"],
                     maximum_enrollment=data["maximumEnrollment"],
                     enrollment=data["enrollment"],
-                    seats_vailable=data["seatsAvailable"],
+                    seats_available=data["seatsAvailable"],
                     wait_capacity=data["waitCapacity"],
                     wait_count=data["waitCount"],
                     wait_available=data["waitAvailable"],
