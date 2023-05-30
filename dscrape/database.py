@@ -230,20 +230,22 @@ class TBL_Restriction_Type(Base):
     restriction_type_id = Column(Integer, primary_key=True, autoincrement=True)
     restriction_type = Column(VARCHAR(128))
 
+
 class TBL_Restriction(Base):
     __tablename__ = "tbl_restriction"
 
     restriction_id = Column(Integer, primary_key=True, autoincrement=True)
     restriction = Column(VARCHAR(128))
     must_be_in = Column(Boolean)
-    
+
     restriction_type = Column(Integer, ForeignKey("tbl_restriction_type.restriction_type_id"))
+
 
 class TBL_Course_Restriction(Base):
     __tablename__ = "tbl_course_restriction"
 
     course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"), primary_key=True)
-    restriction_id = Column(Integer,  ForeignKey("tbl_restriction.restriction_id"), primary_key=True)
+    restriction_id = Column(Integer, ForeignKey("tbl_restriction.restriction_id"), primary_key=True)
 
 
 def create_all():
@@ -302,7 +304,9 @@ def get_current_scrape():
 
 def get_restriction_type_from_str(value: str, session):
     # Try to find the class_type_id for the given value
-    restriction_type_id = session.query(TBL_Restriction_Type).filter_by(restriction_type=value).first()
+    restriction_type_id = (
+        session.query(TBL_Restriction_Type).filter_by(restriction_type=value).first()
+    )
 
     if restriction_type_id is not None:
         return restriction_type_id.restriction_type_id
@@ -313,7 +317,6 @@ def get_restriction_type_from_str(value: str, session):
     session.flush()
 
     return new_class_type.restriction_type_id
-
 
 
 def get_class_type_from_str(value: str, session):
@@ -424,9 +427,9 @@ def add_course(term_id: int, course_code: str, course_description: str):
         return result.course_code
 
 
-def add_course_data(course_ids: list[int], datas: list[dict[str]], restrictions: list[dict[str]] = None):
-
-
+def add_course_data(
+    course_ids: list[int], datas: list[dict[str]], restrictions: list[dict[str]] = None
+):
     if len(course_ids) != len(datas):
         raise Exception("The length of course_ids must match the length of datas")
 
@@ -434,9 +437,7 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]], restrictions:
         raise Exception("The length of restrictions must match the length of datas")
 
     if not restrictions:
-
         restrictions = [None for i in range(len(course_ids))]
-
 
     with Session.begin() as session:
         for course_id, data, restriction in zip(course_ids, datas, restrictions):
@@ -451,9 +452,41 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]], restrictions:
             )
 
             if result:
-                logger.info(
-                    f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database!"
-                )
+                if (
+                    result.campus_description != data["campusDescription"]
+                    or result.course_title != data["courseTitle"]
+                    or result.instructional_method_description
+                    != data["instructionalMethodDescription"]
+                    or result.subject != data["subject"]
+                    or result.subject_long != data["subjectDescription"]
+                    or result.class_type_id != class_type_id
+                ):
+                    logger.info(
+                        f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database! Updating..."
+                    )
+                    result.scrape_id = (get_current_scrape(),)
+                result.id = data["id"]
+                result.crn = data["courseReferenceNumber"]
+                result.course_title = data["courseTitle"]
+                result.subject = data["subject"]
+                result.subject_long = data["subjectDescription"]
+                result.sequence_number = str(data["sequenceNumber"])
+                result.campus_description = data["campusDescription"]
+                result.class_type_id = class_type_id
+                result.credit_hours = data["creditHours"]
+                result.maximum_enrollment = data["maximumEnrollment"]
+                result.enrollment = data["enrollment"]
+                result.seats_available = data["seatsAvailable"]
+                result.wait_capacity = data["waitCapacity"]
+                result.wait_count = data["waitCount"]
+                result.wait_available = data["waitAvailable"]
+                result.credit_hour_high = data["creditHourHigh"]
+                result.credit_hour_low = data["creditHourLow"]
+                result.open_section = data["openSection"]
+                result.link_identifier = data["linkIdentifier"]
+                result.is_section_linked = data["isSectionLinked"]
+                result.instructional_method = data["instructionalMethod"]
+                result.instructional_method_description = data["instructionalMethodDescription"]
             else:
                 result = TBL_Course_Data(
                     # course code
@@ -604,47 +637,42 @@ def add_course_data(course_ids: list[int], datas: list[dict[str]], restrictions:
                 if not result:
                     session.add(to_insert)
 
+
             if restriction:
-
                 add_restriction_nt(course_data_id, restriction, session)
-
-            
 
         session.flush()
 
 
+
+
 def add_restriction_nt(course_data_id: int, restriction: dict[str, list[dict[str, bool]]], session):
-
-
     for key, value in restriction.items():
-
-        restriction_type_id = get_restriction_type_from_str(key, session) 
+        restriction_type_id = get_restriction_type_from_str(key, session)
 
         for rest in value:
-
-            result = session.query(TBL_Restriction).filter_by(restriction=rest['value']).first()
-
+            result = session.query(TBL_Restriction).filter_by(restriction=rest["value"]).first()
 
             if not result:
-
                 result = TBL_Restriction(
-                    restriction=rest['value'],
-                    must_be_in=rest['must_be_in'],
-                    restriction_type=restriction_type_id
+                    restriction=rest["value"],
+                    must_be_in=rest["must_be_in"],
+                    restriction_type=restriction_type_id,
                 )
 
                 session.add(result)
                 session.flush()
 
-            mapping = session.query(TBL_Course_Restriction).filter_by(restriction_id=result.restriction_id).filter_by(course_data_id=course_data_id).first()
+            mapping = (
+                session.query(TBL_Course_Restriction)
+                .filter_by(restriction_id=result.restriction_id)
+                .filter_by(course_data_id=course_data_id)
+                .first()
+            )
 
             if not mapping:
-
                 mapping = TBL_Course_Restriction(
-                    restriction_id=result.restriction_id,
-                    course_data_id=course_data_id
+                    restriction_id=result.restriction_id, course_data_id=course_data_id
                 )
                 session.add(mapping)
                 session.flush()
-
-

@@ -1,5 +1,5 @@
 import traceback
-import os 
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
@@ -12,7 +12,6 @@ from . import logger
 
 def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=False):
     try:
-        
         dumper = dumper()
 
         dumper.scrape_and_dump(debug_break_1)
@@ -44,21 +43,11 @@ def parse_args(args):
     general.add_argument(
         "-d", "--debug", dest="debug", action="store_true", help="Run the debug main method"
     )
-    general.add_argument(
-        "-p", "--password", dest="password", help="The database password"
-    )
-    general.add_argument(
-        "-u", "--username", dest="username", help="The database username"
-    )
-    general.add_argument(
-        "-H", "--host", dest="host", help="The database host"
-    )
-    general.add_argument(
-        "-n", "--db_name", dest="db_name", help="The database name"
-    )
-    general.add_argument(
-        "-P", "--port", dest="db_port", help="The database port"
-    )
+    general.add_argument("-p", "--password", dest="password", help="The database password")
+    general.add_argument("-u", "--username", dest="username", help="The database username")
+    general.add_argument("-H", "--host", dest="host", help="The database host")
+    general.add_argument("-n", "--db_name", dest="db_name", help="The database name")
+    general.add_argument("-P", "--port", dest="db_port", help="The database port")
     return parser.parse_args(args)
 
 
@@ -71,9 +60,9 @@ def main():
 
     if parsed_args.password:
         _ = parsed_args.password
-        parsed_args.password = "*"*len(_)
+        parsed_args.password = "*" * len(_)
         logger.debug(parsed_args)
-        parsed_args.password = _ 
+        parsed_args.password = _
     else:
         logger.debug(parsed_args)
 

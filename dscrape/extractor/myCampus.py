@@ -41,13 +41,13 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 # i haven't tested above 500, but my thought is upper limit of 1200 would be fine
 # this would double the speed because it would half the requests, higher this is the better
 # UPDATE: 1000 is too long, must be lower than that
-# NOTE: url should be less than 8000 characters, otherwise server will drop it 
-COURSE_CODE_REQUEST_AMOUNT = 700 
-
+# NOTE: url should be less than 8000 characters, otherwise server will drop it
+COURSE_CODE_REQUEST_AMOUNT = 700
 
 
 MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
 MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
+
 
 class CourseDumper(CourseScraper):
     def __init__(
@@ -173,22 +173,17 @@ class CourseDumper(CourseScraper):
         r = self.request("get", url)
 
         if r.status_code != 200:
-            return {
-                "levels" : [],
-                "degrees" : []
-            }
+            return {"levels": [], "degrees": []}
 
         j = r.content
 
         page = BeautifulSoup(j, "html.parser")
         spans = page.find_all("span")
 
-        
-        restrictions ={}
+        restrictions = {}
         current = None
         must_be_in = False
         for i in spans:
-
             m = MATCHES_RESTRICTION_GROUP.match(i.text)
 
             if m:
@@ -196,31 +191,28 @@ class CourseDumper(CourseScraper):
                 group = m.group(2).lower()
 
                 if group in restrictions:
-                    current = restrictions[group] 
+                    current = restrictions[group]
 
                 else:
                     current = []
                     restrictions[group] = current
 
             elif MATCHES_RESTRICTION_SPECIAL.match(i.text):
-
-                    s = "special"
-                    if s in restrictions:
-                        current = restrictions[s]
-                    else:
-                        current = []
-                        restrictions[s] = current
+                s = "special"
+                if s in restrictions:
+                    current = restrictions[s]
+                else:
+                    current = []
+                    restrictions[s] = current
 
             elif current is not None and "detail-popup-indentation" in i["class"]:
-                current.append({
-                    "value": i.text,
-                    "must_be_in" : must_be_in })
+                current.append({"value": i.text, "must_be_in": must_be_in})
             else:
                 if i.text == "Not all restrictions are applicable.":
                     continue
                 logger.warn(f"Unknown span while parsing restrictions: {i}")
 
-        return restrictions 
+        return restrictions
 
     def __depricated__scrape_and_dump(self):
         print("getting terms...")
@@ -245,10 +237,7 @@ class CourseDumper(CourseScraper):
 
         return
 
-
-
     def scrape_and_dump(self, debug_break_1=False):
-
         terms = self.get_json_terms()
 
         logger.info(f"Scraping using dumper: {self}")
@@ -294,7 +283,7 @@ class CourseDumper(CourseScraper):
                 #       otherwise we probably need to query the db for every course data we insert
                 course_id_map = {course_code: j for course_code, j in zip(course_code, i)}
                 proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
-                #restrictions = [dumper.get_course_restrictions(id, i['courseReferenceNumber']) for i in course_data]
+                # restrictions = [dumper.get_course_restrictions(id, i['courseReferenceNumber']) for i in course_data]
 
                 logger.info(
                     f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}"
@@ -305,13 +294,10 @@ class CourseDumper(CourseScraper):
 
                 database.add_course_data(proper_course_id, course_data)
                 # database.add_course_data(proper_course_id, course_data, restrictions)
-                
 
             if debug_break_1:
                 logger.error("DEBUG BREAK")
                 return
-
-
 
 
 class UOIT_Dumper(CourseDumper):
