@@ -2,7 +2,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,pycharm
 
 #Python venv for jason:
-.ezcampus_data
+ezcampus_data
 
 .env
 *.log
