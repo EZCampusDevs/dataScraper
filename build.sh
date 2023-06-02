@@ -11,5 +11,7 @@ trap 'exec 2>&4 1>&3' 0 1 2 3
 exec 1>$log_file 2>&1
 
 
+chmod +x entrypoint.sh
+
 docker build -t dscrape .
 
