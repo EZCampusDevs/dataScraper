@@ -125,3 +125,11 @@ def ask_for_confirmation(prompt: str):
             return True
         elif i in ("no", "n", "deny"):
             return False
+
+
+
+def replace_bad_escapes(value):
+
+    value = value.replace("&amp;", "&")
+
+    return value

@@ -52,12 +52,15 @@ MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
 class CourseDumper(CourseScraper):
     def __init__(
         self,
+        school_value:str,
         hostname: str,
         mep_code: str,
         retries=float("inf"),
         timeout=32,
     ) -> None:
         super().__init__(retries, timeout)
+
+        self.school_id = database.get_school_id(school_value)
 
         self.hostname = hostname
 
@@ -247,7 +250,7 @@ class CourseDumper(CourseScraper):
 
         logger.info(f"Found term {term_id}")
 
-        database.add_terms(term_id, term_desc)
+        database.add_terms(self.school_id, term_id, term_desc)
 
         currentYear = (datetime.now().year - 1) * 100
         logger.info(f"Current term year: {currentYear}")
@@ -292,7 +295,7 @@ class CourseDumper(CourseScraper):
                 # with open("debug1.json", "w")as writer:
                 #     json.dump(proper_course_id, writer, indent=3)
 
-                database.add_course_data(proper_course_id, course_data)
+                database.add_course_data(self.school_id, proper_course_id, course_data)
                 # database.add_course_data(proper_course_id, course_data, restrictions)
 
             if debug_break_1:
@@ -302,9 +305,9 @@ class CourseDumper(CourseScraper):
 
 class UOIT_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("ssp.mycampus.ca", "UOIT", retries, timeout)
+        super().__init__("Ontario Tech University - Canada","ssp.mycampus.ca", "UOIT", retries, timeout)
 
 
 class UVIC_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("banner.uvic.ca", "UVIC", retries, timeout)
+        super().__init__("University of Victory - Canada", "banner.uvic.ca", "UVIC", retries, timeout)
