@@ -4,7 +4,6 @@
 #Python venv for jason:
 ezcampus_data
 
-.env
 *.log
 *.json
 *.db
