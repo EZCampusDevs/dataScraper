@@ -83,6 +83,7 @@ class TBL_School(Base):
     school_id = Column(Integer, primary_key=True)
     school_unique_value = Column(VARCHAR(128))
 
+
 class TBL_Term(Base):
     __tablename__ = "tbl_term"
 
@@ -306,12 +307,9 @@ def get_current_scrape():
         return result.scrape_id
 
 
-def get_school_id(school_value:str):
-
+def get_school_id(school_value: str):
     with Session.begin() as session:
-        result = (
-            session.query(TBL_School).filter_by(school_unique_value=school_value).first()
-        )
+        result = session.query(TBL_School).filter_by(school_unique_value=school_value).first()
 
         if result is not None:
             return result.school_id
@@ -356,7 +354,7 @@ def get_class_type_from_str(value: str, session):
     return new_class_type.class_type_id
 
 
-def add_terms(school_id:int, term_ids: list[int], term_descriptions: list[str]):
+def add_terms(school_id: int, term_ids: list[int], term_descriptions: list[str]):
     if len(term_ids) != len(term_descriptions):
         raise ValueError("term_ids must be the same length as term_descriptions")
 
@@ -364,10 +362,12 @@ def add_terms(school_id:int, term_ids: list[int], term_descriptions: list[str]):
         for term_id, term_description in zip(term_ids, term_descriptions):
             term_id = int(term_id)
 
-            result = session.query(TBL_Term)\
-            .filter_by(term_id=term_id)\
-            .filter_by(school_id=school_id)\
-            .first()
+            result = (
+                session.query(TBL_Term)
+                .filter_by(term_id=term_id)
+                .filter_by(school_id=school_id)
+                .first()
+            )
 
             if not result:
                 result = TBL_Term(
@@ -381,15 +381,19 @@ def add_terms(school_id:int, term_ids: list[int], term_descriptions: list[str]):
         session.flush()
 
 
-def add_term_no_transaction(school_id:int,term_id: int, term_description: str, session: sessionmaker):
+def add_term_no_transaction(
+    school_id: int, term_id: int, term_description: str, session: sessionmaker
+):
     term_id = int(term_id)
     school_id = int(school_id)
-    result = session.query(TBL_Term).filter_by(term_id=term_id).filter_by(school_id=school_id).first()
+    result = (
+        session.query(TBL_Term).filter_by(term_id=term_id).filter_by(school_id=school_id).first()
+    )
 
     if not result:
         result = TBL_Term(
             term_id=term_id,
-                    school_id=school_id,
+            school_id=school_id,
             term_description=dataUtil.replace_bad_escapes(term_description),
         )
 
@@ -398,9 +402,9 @@ def add_term_no_transaction(school_id:int,term_id: int, term_description: str, s
         session.flush()
 
 
-def add_term(school_id:int,term_id: int, term_description: str):
+def add_term(school_id: int, term_id: int, term_description: str):
     with Session.begin() as session:
-        add_term_no_transaction(school_id,term_id, term_description, session)
+        add_term_no_transaction(school_id, term_id, term_description, session)
 
 
 def add_courses(term_ids: list[int], course_codes: list[str], course_descriptions: list[str]):
@@ -434,7 +438,6 @@ def add_courses(term_ids: list[int], course_codes: list[str], course_description
 
 
 def add_course(term_id: int, course_code: str, course_description: str):
-
     with Session.begin() as session:
         result = (
             session.query(TBL_Course)
@@ -458,8 +461,10 @@ def add_course(term_id: int, course_code: str, course_description: str):
 
 
 def add_course_data(
-    school_id:int,
-    course_ids: list[int], datas: list[dict[str]], restrictions: list[dict[str]] = None
+    school_id: int,
+    course_ids: list[int],
+    datas: list[dict[str]],
+    restrictions: list[dict[str]] = None,
 ):
     if len(course_ids) != len(datas):
         raise Exception("The length of course_ids must match the length of datas")
@@ -628,7 +633,7 @@ def add_course_data(
                     )
                     continue
 
-                add_term_no_transaction(school_id,term_id, "UNKNOWN AT TIME OF ADDING", session)
+                add_term_no_transaction(school_id, term_id, "UNKNOWN AT TIME OF ADDING", session)
 
                 start_date = dataUtil.parse_date(useful_data["startDate"])
                 end_date = dataUtil.parse_date(useful_data["endDate"])
@@ -677,13 +682,10 @@ def add_course_data(
                 if not result:
                     session.add(to_insert)
 
-
             if restriction:
                 add_restriction_nt(course_data_id, restriction, session)
 
         session.flush()
-
-
 
 
 def add_restriction_nt(course_data_id: int, restriction: dict[str, list[dict[str, bool]]], session):
@@ -691,8 +693,7 @@ def add_restriction_nt(course_data_id: int, restriction: dict[str, list[dict[str
         restriction_type_id = get_restriction_type_from_str(key, session)
 
         for rest in value:
-
-            rest['value'] = dataUtil.replace_bad_escapes(rest['value'])
+            rest["value"] = dataUtil.replace_bad_escapes(rest["value"])
 
             result = session.query(TBL_Restriction).filter_by(restriction=rest["value"]).first()
 

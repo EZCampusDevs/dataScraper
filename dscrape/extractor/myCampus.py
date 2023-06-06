@@ -52,7 +52,7 @@ MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
 class CourseDumper(CourseScraper):
     def __init__(
         self,
-        school_value:str,
+        school_value: str,
         hostname: str,
         mep_code: str,
         retries=float("inf"),
@@ -305,9 +305,13 @@ class CourseDumper(CourseScraper):
 
 class UOIT_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("Ontario Tech University - Canada","ssp.mycampus.ca", "UOIT", retries, timeout)
+        super().__init__(
+            "Ontario Tech University - Canada", "ssp.mycampus.ca", "UOIT", retries, timeout
+        )
 
 
 class UVIC_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("University of Victory - Canada", "banner.uvic.ca", "UVIC", retries, timeout)
+        super().__init__(
+            "University of Victory - Canada", "banner.uvic.ca", "UVIC", retries, timeout
+        )
