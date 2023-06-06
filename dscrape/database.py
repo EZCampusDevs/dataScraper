@@ -99,10 +99,6 @@ class TBL_Course(Base):
     course_code = Column(VARCHAR(32))
     course_description = Column(VARCHAR(128))
 
-    # __table_args__ = (
-    #     UniqueConstraint("term_id", "course_code", name="_term_id_course_code_constraint"),
-    # )
-
 
 class TBL_Class_Type(Base):
     __tablename__ = "tbl_classtype"

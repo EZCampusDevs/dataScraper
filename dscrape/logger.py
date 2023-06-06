@@ -42,3 +42,13 @@ def create_setup_logger(name: str = None, log_file: str = "", log_level=logging.
 
 def setup_logger(log_file: str = "", log_level=logging.DEBUG):
     create_setup_logger(constants.BRAND, log_file, log_level)
+
+
+def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_unhandled_exception
