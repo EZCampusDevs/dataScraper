@@ -128,6 +128,6 @@ def ask_for_confirmation(prompt: str):
 
 
 def replace_bad_escapes(value):
-    value = value.replace("&amp;", "&")
+    value = value.replace("&amp;", "&").replace("&#39;", "'")
 
     return value
