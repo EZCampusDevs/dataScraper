@@ -315,3 +315,15 @@ class UVIC_Dumper(CourseDumper):
         super().__init__(
             "University of Victory - Canada", "banner.uvic.ca", "UVIC", retries, timeout
         )
+
+class DC_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__(
+            "Durham College - Canada", "ssp.mycampus.ca", "DC", retries, timeout
+        )
+
+class TTU_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__(
+            "Texas Tech University - USA", "registration.texastech.edu", "TTU", retries, timeout
+        )

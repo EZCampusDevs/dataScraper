@@ -122,7 +122,9 @@ def main():
 
 
 def main2():
-    dumper = extractor.myCampus.UOIT_Dumper
+    dumper = extractor.myCampus.TTU_Dumper
+
+    scrape_course_information(dumper, debug_break_1=True)
     # database.add_fac()
 
     #    database.drop_all()
