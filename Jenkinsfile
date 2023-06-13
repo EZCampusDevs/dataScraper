@@ -6,7 +6,9 @@ pipeline {
         stage('Build Docker Image') { 
             steps { 
 
-                    sshPublisher(publishers: [
+                    sshPublisher(
+                        failOnError: true,
+                        publishers: [
                         sshPublisherDesc(configName: '2GB_Glassfish_VPS', transfers: [
                             sshTransfer(cleanRemote: true, excludes: '', execCommand: '''
                             cd ~/pipeline_datascraper
