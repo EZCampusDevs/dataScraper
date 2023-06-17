@@ -60,6 +60,8 @@ class CourseDumper(CourseScraper):
     ) -> None:
         super().__init__(retries, timeout)
 
+        self.SCHOOL_VALUE = school_value
+
         self.school_id = database.get_school_id(school_value)
 
         self.hostname = hostname
@@ -316,14 +318,57 @@ class UVIC_Dumper(CourseDumper):
             "University of Victoria - Canada", "banner.uvic.ca", "UVIC", retries, timeout
         )
 
+
 class DC_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__(
-            "Durham College - Canada", "ssp.mycampus.ca", "DC", retries, timeout
-        )
+        super().__init__("Durham College - Canada", "ssp.mycampus.ca", "DC", retries, timeout)
+
 
 class TTU_Dumper(CourseDumper):
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
             "Texas Tech University - USA", "registration.texastech.edu", "TTU", retries, timeout
         )
+
+
+class RDP_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__("Red Deer Polytechnic - Canada", "myinfo.rdc.ab.ca", "", retries, timeout)
+
+
+class OC_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__(
+            "Okanagan College - Canada", "selfservice.okanagan.bc.ca", "", retries, timeout
+        )
+
+
+class TRU_Dumper(CourseDumper):
+
+    """
+    Seems to have issues with 400 errors sometimes
+    """
+
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__(
+            "Thompson Rivers University - Canada", "reg-prod.ec.tru.ca", "", retries, timeout
+        )
+
+
+class KPU_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__(
+            "Kwantlen Polytechnic University - Canada", "banweb3.kpu.ca", "", retries, timeout
+        )
+
+
+class UOS_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__(
+            "University of Saskatchewan - Canada", "banner.usask.ca", "", retries, timeout
+        )
+
+
+class YU_Dumper(CourseDumper):
+    def __init__(self, retries=float("inf"), timeout=32) -> None:
+        super().__init__("Yukon University - Canada", "banner.yukonu.ca", "", retries, timeout)

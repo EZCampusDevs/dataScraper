@@ -599,7 +599,7 @@ def add_course_data(
                         instructor_name=faculty["displayName"],
                         instructor_email=faculty["emailAddress"],
                         instructor_rating=0,
-                        scrape_id=get_current_scrape()
+                        scrape_id=get_current_scrape(),
                     )
 
                     session.add(result)
