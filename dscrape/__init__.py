@@ -62,6 +62,7 @@ def get_and_prase_args(args):
     general.add_argument("-H", "--host", dest="host", help="The database host")
     general.add_argument("-n", "--db_name", dest="db_name", help="The database name")
     general.add_argument("-P", "--port", dest="db_port", help="The database port")
+    general.add_argument("-t", "--threads", dest="threads", help="The number of extractors to run at a single time")
     return parser.parse_args(args)
 
 
@@ -101,6 +102,18 @@ def main():
     if not parsed_args.db_port:
         parsed_args.db_port = int(os.getenv("db_port", 3306))
 
+    if not parsed_args.threads:
+        parsed_args.threads = 5
+    elif not parsed_args.threads.isdigit():
+        logger.error("Threads argument must be an integer!")
+        return 1
+    else:
+        parsed_args.threads = int(parsed_args.threads)
+
+        if parsed_args.threads <= 0:
+            logger.error("Thread count must be larger than 0!")
+            return 1
+
 
     extractors_to_use = extractor.extractors.copy()
 
@@ -128,6 +141,7 @@ def main():
     logger.info(f"Read database name {parsed_args.db_name}")
     logger.info(f"Read username {parsed_args.username}")
     logger.info(f"Read password {'*'*len(parsed_args.password)}")
+    logger.info(f"Read threads {parsed_args.threads}")
 
     database.init_database(
         use_mysql=True,
@@ -152,7 +166,7 @@ def main():
             main2()
             return
 
-        with ThreadPoolExecutor(max_workers=5) as pool:
+        with ThreadPoolExecutor(max_workers=parsed_args.threads) as pool:
             pool.map(scrape_course_information, extractors_to_use)
 
     finally:
