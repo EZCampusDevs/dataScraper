@@ -52,7 +52,6 @@ MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
 class CourseDumper(CourseScraper):
     def __init__(
         self,
-        school_value: str,
         hostname: str,
         mep_code: str,
         retries=float("inf"),
@@ -60,9 +59,10 @@ class CourseDumper(CourseScraper):
     ) -> None:
         super().__init__(retries, timeout)
 
-        self.SCHOOL_VALUE = school_value
+        if self.SCHOOL_VALUE is None:
+            raise RuntimeError("SCHOOL_VALUE was None, this is a compile error")
 
-        self.school_id = database.get_school_id(school_value)
+        self.school_id = database.get_school_id(self.SCHOOL_VALUE)
 
         self.hostname = hostname
 
@@ -306,40 +306,50 @@ class CourseDumper(CourseScraper):
 
 
 class UOIT_Dumper(CourseDumper):
+
+    SCHOOL_VALUE = "Ontario Tech University - Canada" 
+
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "Ontario Tech University - Canada", "ssp.mycampus.ca", "UOIT", retries, timeout
+            "ssp.mycampus.ca", "UOIT", retries, timeout
         )
 
 
 class UVIC_Dumper(CourseDumper):
+
+    SCHOOL_VALUE = "University of Victoria - Canada"
+
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "University of Victoria - Canada", "banner.uvic.ca", "UVIC", retries, timeout
+            "banner.uvic.ca", "UVIC", retries, timeout
         )
 
 
 class DC_Dumper(CourseDumper):
+    SCHOOL_VALUE = "Durham College - Canada"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("Durham College - Canada", "ssp.mycampus.ca", "DC", retries, timeout)
+        super().__init__( "ssp.mycampus.ca", "DC", retries, timeout)
 
 
 class TTU_Dumper(CourseDumper):
+    SCHOOL_VALUE = "Texas Tech University - USA"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "Texas Tech University - USA", "registration.texastech.edu", "TTU", retries, timeout
+             "registration.texastech.edu", "TTU", retries, timeout
         )
 
 
 class RDP_Dumper(CourseDumper):
+    SCHOOL_VALUE = "Red Deer Polytechnic - Canada"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("Red Deer Polytechnic - Canada", "myinfo.rdc.ab.ca", "", retries, timeout)
+        super().__init__( "myinfo.rdc.ab.ca", "", retries, timeout)
 
 
 class OC_Dumper(CourseDumper):
+    SCHOOL_VALUE = "Okanagan College - Canada"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "Okanagan College - Canada", "selfservice.okanagan.bc.ca", "", retries, timeout
+             "selfservice.okanagan.bc.ca", "", retries, timeout
         )
 
 
@@ -348,27 +358,31 @@ class TRU_Dumper(CourseDumper):
     """
     Seems to have issues with 400 errors sometimes
     """
+    SCHOOL_VALUE = "Thompson Rivers University - Canada"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "Thompson Rivers University - Canada", "reg-prod.ec.tru.ca", "", retries, timeout
+             "reg-prod.ec.tru.ca", "", retries, timeout
         )
 
 
 class KPU_Dumper(CourseDumper):
+    SCHOOL_VALUE = "Kwantlen Polytechnic University - Canada"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "Kwantlen Polytechnic University - Canada", "banweb3.kpu.ca", "", retries, timeout
+             "banweb3.kpu.ca", "", retries, timeout
         )
 
 
 class UOS_Dumper(CourseDumper):
+    SCHOOL_VALUE = "University of Saskatchewan - Canada"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__(
-            "University of Saskatchewan - Canada", "banner.usask.ca", "", retries, timeout
+             "banner.usask.ca", "", retries, timeout
         )
 
 
 class YU_Dumper(CourseDumper):
+    SCHOOL_VALUE = "Yukon University - Canada"
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("Yukon University - Canada", "banner.yukonu.ca", "", retries, timeout)
+        super().__init__( "banner.yukonu.ca", "", retries, timeout)

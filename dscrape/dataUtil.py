@@ -1,3 +1,4 @@
+import re 
 import time
 import hashlib
 import traceback
@@ -131,3 +132,50 @@ def replace_bad_escapes(value):
     value = value.replace("&amp;", "&").replace("&#39;", "'")
 
     return value
+
+
+def parse_range_input(value:str):
+    """
+    Parses a csv of numbers and ranges
+
+    1,2,3,4 -> (1, 2, 3, 4)
+    1-5,8   -> (1, 2, 3, 4, 5, 8)
+    """
+
+    output_nums = set()
+
+    values = value.split(",")
+
+    REGEX = re.compile(r"(\d+\s*\-\s*\d+)|(\d+)")
+
+    for value in values:
+
+        m = REGEX.match(value.strip())
+
+        if not m:
+            continue
+
+        range_pred = m.group(1)
+        single_num = m.group(2)
+
+        if range_pred:
+
+            _ = [int(i.strip()) for i in range_pred.split("-")]
+
+            start, stop = _
+
+            if start > stop:
+                start, stop = stop, start
+
+            stop += 1
+
+            for i in range(start, stop):
+                output_nums.add(i)
+
+        if single_num:
+
+            _ = int(single_num.strip())
+
+            output_nums.add(_)
+
+    return tuple(output_nums)

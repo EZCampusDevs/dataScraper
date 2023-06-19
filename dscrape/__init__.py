@@ -22,7 +22,19 @@ def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=Fal
         logger.error(traceback.format_exc())
 
 
-def parse_args(args):
+def list_extractors():
+
+    max_width = len(str(len(extractor.extractors)))
+
+    for i, s in enumerate(extractor.extractors):
+
+        padding = " " * (max_width - len(str(i)))
+
+        print(f"{padding}{i} : {s.SCHOOL_VALUE}")
+
+
+
+def get_and_prase_args(args):
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -43,6 +55,8 @@ def parse_args(args):
     general.add_argument(
         "-d", "--debug", dest="debug", action="store_true", help="Run the debug main method"
     )
+    general.add_argument("-l", "--list-scrapers", action="store_true",dest="listscrape", help="List the scrapers and their number.")
+    general.add_argument("-s", "--scrapers", dest="scrape", help="The number to indicate which scrapers to run. Can be csv (1,2,3...), can be range, (1,2,3-5)")
     general.add_argument("-p", "--password", dest="password", help="The database password")
     general.add_argument("-u", "--username", dest="username", help="The database username")
     general.add_argument("-H", "--host", dest="host", help="The database host")
@@ -56,7 +70,13 @@ def main():
 
     load_dotenv()
 
-    parsed_args = parse_args(sys.argv[1:])
+    parsed_args = get_and_prase_args(sys.argv[1:])
+
+    if parsed_args.listscrape:
+
+        list_extractors()
+
+        return
 
     if parsed_args.password:
         _ = parsed_args.password
@@ -80,6 +100,28 @@ def main():
 
     if not parsed_args.db_port:
         parsed_args.db_port = int(os.getenv("db_port", 3306))
+
+
+    extractors_to_use = extractor.extractors.copy()
+
+    if parsed_args.scrape:
+
+        index = dataUtil.parse_range_input(parsed_args.scrape)
+
+        if not index:
+            print("Could not parse any indicies. Exiting...")
+            return 1
+
+        logger.debug(f"Parsed index: {index}")
+
+        new_extractors = [extractors_to_use[i] for i in index if i >= 0 and i < len(extractors_to_use)]
+
+        if len(new_extractors) != len(index):
+            logger.warning("Length missmatch detected! Invalid index will be ignored.")
+
+        extractors_to_use = new_extractors
+
+    logger.debug(extractors_to_use)
 
     logger.info(f"Read hostname {parsed_args.host}")
     logger.info(f"Read port {parsed_args.db_port}")
@@ -111,7 +153,7 @@ def main():
             return
 
         with ThreadPoolExecutor(max_workers=5) as pool:
-            pool.map(scrape_course_information, extractor.extractors)
+            pool.map(scrape_course_information, extractors_to_use)
 
     finally:
         ended_at = dataUtil.time_now_precise()
