@@ -178,11 +178,14 @@ def main():
 
 
 def main2():
-    dumper = extractor.myCampus.YU_Dumper
 
-    scrape_course_information(dumper, debug_break_1=False)
-    # database.add_fac()
+    school = extractor.UOIT_Dumper
 
-    #    database.drop_all()
-    #
-    # scrape_course_information(dumper, debug_break_1=True)
+    school().scrape_and_dump(True)
+
+    # for i in database.add_terms(
+    #     school.school_id,
+    #     [1, 2, 3, 4, 5, 6, 7],
+    #     ["","","","","","","",]
+    # ):
+    #     print(i)

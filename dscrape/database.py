@@ -87,19 +87,28 @@ class TBL_School(Base):
 class TBL_Term(Base):
     __tablename__ = "tbl_term"
 
-    term_id = Column(Integer, primary_key=True)
-    school_id = Column(Integer, ForeignKey("tbl_school.school_id"), primary_key=True)
+    term_id = Column(Integer, primary_key=True, autoincrement=True)
+    school_id = Column(Integer, ForeignKey("tbl_school.school_id"))
+    real_term_id = Column(Integer)
     term_description = Column(VARCHAR(128))
+
+
+    __table_args__ = (
+        UniqueConstraint("school_id", "real_term_id", name="_term_id_school_id_constraint"),
+    )
 
 
 class TBL_Course(Base):
     __tablename__ = "tbl_course"
 
     course_id = Column(Integer, primary_key=True, autoincrement=True)
-    term_id = Column(Integer, ForeignKey("tbl_term.term_id"), primary_key=True)
+    term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
     course_code = Column(VARCHAR(32))
     course_description = Column(VARCHAR(128))
 
+    __table_args__ = (
+        UniqueConstraint("term_id", "course_code", name="_term_id_course_code_constraint"),
+    )
 
 class TBL_Class_Type(Base):
     __tablename__ = "tbl_classtype"
@@ -359,40 +368,32 @@ def add_terms(school_id: int, term_ids: list[int], term_descriptions: list[str])
         raise ValueError("term_ids must be the same length as term_descriptions")
 
     with Session.begin() as session:
-        for term_id, term_description in zip(term_ids, term_descriptions):
-            term_id = int(term_id)
 
-            result = (
-                session.query(TBL_Term)
-                .filter_by(term_id=term_id)
-                .filter_by(school_id=school_id)
-                .first()
+        term_ids = [
+            add_term_no_transaction(
+                school_id, term_id, term_description, session
             )
+            for term_id, term_description in zip(term_ids, term_descriptions)
+        ]        
 
-            if not result:
-                result = TBL_Term(
-                    term_id=term_id,
-                    school_id=school_id,
-                    term_description=dataUtil.replace_bad_escapes(term_description),
-                )
-
-                session.add(result)
-
-        session.flush()
+        return term_ids
 
 
 def add_term_no_transaction(
-    school_id: int, term_id: int, term_description: str, session: sessionmaker
+    school_id: int, real_term_id: int, term_description: str, session: sessionmaker
 ):
-    term_id = int(term_id)
+    real_term_id = int(real_term_id)
     school_id = int(school_id)
     result = (
-        session.query(TBL_Term).filter_by(term_id=term_id).filter_by(school_id=school_id).first()
+        session.query(TBL_Term)
+        .filter_by(real_term_id=real_term_id)
+        .filter_by(school_id=school_id)
+        .first()
     )
 
     if not result:
         result = TBL_Term(
-            term_id=term_id,
+            real_term_id=real_term_id,
             school_id=school_id,
             term_description=dataUtil.replace_bad_escapes(term_description),
         )
@@ -401,10 +402,9 @@ def add_term_no_transaction(
 
         session.flush()
 
+    return result.term_id
 
-def add_term(school_id: int, term_id: int, term_description: str):
-    with Session.begin() as session:
-        add_term_no_transaction(school_id, term_id, term_description, session)
+
 
 
 def add_courses(term_ids: list[int], course_codes: list[str], course_descriptions: list[str]):
@@ -487,10 +487,6 @@ def add_course_data(
                 .first()
             )
 
-            # data["campusDescription"] =dataUtil.replace_bad_escapes (data["campusDescription"])
-            # data["courseTitle"] =dataUtil.replace_bad_escapes       (data["courseTitle"])
-            # data["subject"] =dataUtil.replace_bad_escapes           (data["subject"])
-            # data["subjectDescription"] =dataUtil.replace_bad_escapes(data["subjectDescription"])
 
             if result:
                 if (
@@ -627,14 +623,14 @@ def add_course_data(
                 useful_data = meeting["meetingTime"]
 
                 crn = useful_data["courseReferenceNumber"]
-                term_id = dataUtil.parse_int(useful_data["term"])
-                if term_id == -1:
+                real_term_id = dataUtil.parse_int(useful_data["term"])
+                if real_term_id == -1:
                     logger.warning(
                         f"Got bad term_id of {useful_data['term']} course_id={course_id} for meeting {meeting}"
                     )
                     continue
 
-                add_term_no_transaction(school_id, term_id, "UNKNOWN AT TIME OF ADDING", session)
+                term_id = add_term_no_transaction(school_id, real_term_id, "UNKNOWN AT TIME OF ADDING", session)
 
                 start_date = dataUtil.parse_date(useful_data["startDate"])
                 end_date = dataUtil.parse_date(useful_data["endDate"])
