@@ -7,6 +7,7 @@ class CourseScraper(requester.Requester):
     """
 
     SCHOOL_VALUE = None
+    SUBDOMAIN = None
 
     def scrape_and_dump(self, debug_break_1: bool = False):
         """

@@ -82,6 +82,7 @@ class TBL_School(Base):
 
     school_id = Column(Integer, primary_key=True)
     school_unique_value = Column(VARCHAR(128))
+    subdomain = Column(VARCHAR(64))
 
 
 class TBL_Term(Base):
@@ -316,14 +317,15 @@ def get_current_scrape():
         return result.scrape_id
 
 
-def get_school_id(school_value: str):
+def get_school_id(school_value: str, subdomain:str):
     with Session.begin() as session:
         result = session.query(TBL_School).filter_by(school_unique_value=school_value).first()
 
         if result is not None:
             return result.school_id
 
-        new_result = TBL_School(school_unique_value=school_value)
+        new_result = TBL_School(school_unique_value=school_value,
+                                subdomain=subdomain)
         session.add(new_result)
 
         session.flush()
