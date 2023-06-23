@@ -14,5 +14,5 @@ COPY .env $DIR
 RUN pip install -r $DIR/requirements.txt
 
 # have to hard code path here???
-# ENTRYPOINT ["/opt/dscrape/entrypoint.sh"]
+ENTRYPOINT ["/opt/dscrape/entrypoint.sh"]
 
