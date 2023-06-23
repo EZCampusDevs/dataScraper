@@ -23,277 +23,12 @@ from . import dataUtil
 from . import logger
 
 
+from py_core.db import * 
+from py_core.db.db_tables import *
+
 class Scrape:
     Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
     Scrape_id = -1
-
-
-Engine = None
-Session: sessionmaker = None
-Base = declarative_base()
-
-
-def init_database(
-    use_mysql=False,
-    database_host="localhost",
-    database_port=3306,
-    database_name="hibernate_db",
-    database_user="test",
-    database_pass="root",
-    database_directory="./",
-    create=True,
-):
-    global Engine, Session, Base
-
-    if Engine is not None:
-        raise Exception("Database engine already initialized")
-
-    os.makedirs(database_directory, exist_ok=True)
-
-    db_path = os.path.join(database_directory, database_name)
-    DB_URL = f"sqlite:///{db_path}.sqlite"
-    if use_mysql:
-        DB_URL = f"mysql+mysqlconnector://{database_user}:{database_pass}@{database_host}:{database_port}/{database_name}"
-    Engine = create_engine(DB_URL, echo=False)
-
-    def _fk_pragma_on_connect(dbapi_con, con_record):
-        if use_mysql:
-            return
-        dbapi_con.execute("pragma foreign_keys=ON")
-
-    event.listen(Engine, "connect", _fk_pragma_on_connect)
-
-    Session = sessionmaker(bind=Engine)
-    Base.metadata.bind = Engine
-    if create:
-        create_all()
-
-
-class TBL_Scrape_History(Base):
-    __tablename__ = "tbl_scrape_history"
-
-    scrape_id = Column(Integer, primary_key=True, autoincrement=True)
-    scrape_time = Column(TIMESTAMP)
-    has_been_indexed = Column(Boolean)
-
-
-class TBL_School(Base):
-    __tablename__ = "tbl_school"
-
-    school_id = Column(Integer, primary_key=True)
-    school_unique_value = Column(VARCHAR(128))
-    subdomain = Column(VARCHAR(64))
-
-
-class TBL_Term(Base):
-    __tablename__ = "tbl_term"
-
-    term_id = Column(Integer, primary_key=True, autoincrement=True)
-    school_id = Column(Integer, ForeignKey("tbl_school.school_id"))
-    real_term_id = Column(Integer)
-    term_description = Column(VARCHAR(128))
-
-
-    __table_args__ = (
-        UniqueConstraint("school_id", "real_term_id", name="_term_id_school_id_constraint"),
-    )
-
-
-class TBL_Course(Base):
-    __tablename__ = "tbl_course"
-
-    course_id = Column(Integer, primary_key=True, autoincrement=True)
-    term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
-    course_code = Column(VARCHAR(32))
-    course_description = Column(VARCHAR(128))
-
-    __table_args__ = (
-        UniqueConstraint("term_id", "course_code", name="_term_id_course_code_constraint"),
-    )
-
-class TBL_Class_Type(Base):
-    __tablename__ = "tbl_classtype"
-
-    class_type_id = Column(Integer, primary_key=True, autoincrement=True)
-    class_type = Column(VARCHAR(128))
-
-
-class TBL_Course_Data(Base):
-    __tablename__ = "tbl_course_data"
-
-    course_data_id = Column(Integer, autoincrement=True, primary_key=True)
-
-    course_id = Column(Integer, ForeignKey("tbl_course.course_id"))
-
-    scrape_id = Column(Integer, ForeignKey("tbl_scrape_history.scrape_id"))
-
-    # course reference number / crn
-    crn = Column(VARCHAR(32))
-    # i'm not really sure what this actually is
-    id = Column(Integer)
-
-    # Biology II
-    course_title = Column(VARCHAR(128))
-    # BIOL
-    subject = Column(VARCHAR(128))
-    # Biology
-    subject_long = Column(VARCHAR(128))
-
-    # 001 / 002 / 003...; conerting to int so will need to pad 0 later if needed
-    sequence_number = Column(VARCHAR(128))
-
-    # which campus -> 'OT-North Oshawa'
-    campus_description = Column(VARCHAR(128))
-
-    # lab, lecture, tutorial
-    class_type_id = Column(Integer, ForeignKey("tbl_classtype.class_type_id"))
-
-    credit_hours = Column(Integer)
-    maximum_enrollment = Column(Integer)
-    enrollment = Column(Integer)
-    seats_available = Column(Integer)
-    wait_capacity = Column(Integer)
-    wait_count = Column(Integer)
-    wait_available = Column(Integer)
-    # cross_list = Column(VARCHAR)
-    # cross_list_capacity = Column(VARCHAR)
-    # cross_list_count = Column(Integer)
-    # cross_list_available = Column(Integer)
-    credit_hour_high = Column(Integer)
-    credit_hour_low = Column(Integer)
-    # credit_hour_indicator = Column(VARCHAR)
-    open_section = Column(Boolean)
-    link_identifier = Column(VARCHAR(128))
-    is_section_linked = Column(Boolean)
-    # reserved_seat_summary = Column(VARCHAR)
-    # section_attributes = Column(VARCHAR)
-
-    # CLS -> In-Person
-    # WB1 -> Virtual Meet Times
-    instructional_method = Column(VARCHAR(128))
-
-    # In-Person
-    # Virtual Meet Times
-    instructional_method_description = Column(VARCHAR(128))
-
-    __table_args__ = (UniqueConstraint("course_id", "crn", name="_course_id_crn_constraint"),)
-
-
-class TBL_Course_Faculty(Base):
-    __tablename__ = "tbl_course_faculty"
-
-    course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"), primary_key=True)
-
-    faculty_id = Column(Integer, ForeignKey("tbl_faculty.faculty_id"), primary_key=True)
-
-
-class TBL_Faculty(Base):
-    __tablename__ = "tbl_faculty"
-
-    faculty_id = Column(Integer, primary_key=True, autoincrement=True)
-    banner_id = Column(BINARY(length=32), unique=True, nullable=False)
-    scrape_id = Column(Integer, ForeignKey("tbl_scrape_history.scrape_id"))
-    instructor_name = Column(VARCHAR(128))
-    instructor_email = Column(VARCHAR(128))
-    instructor_rating = Column(Integer)
-
-
-class TBL_Meeting(Base):
-    __tablename__ = "tbl_meeting"
-
-    meeting_id = Column(Integer, autoincrement=True, primary_key=True)
-
-    meeting_hash = Column(BINARY(length=32), unique=True, nullable=False)
-
-    course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"))
-
-    term_id = Column(Integer, ForeignKey("tbl_term.term_id"))
-
-    crn = Column(VARCHAR(32))
-
-    building = Column(VARCHAR(128))
-    building_description = Column(VARCHAR(128))
-
-    campus = Column(VARCHAR(128))
-    campus_description = Column(VARCHAR(128))
-
-    meeting_type = Column(VARCHAR(128))
-    meeting_type_description = Column(VARCHAR(128))
-
-    start_date = Column(Date)
-    end_date = Column(Date)
-
-    begin_time = Column(VARCHAR(128))
-    end_time = Column(VARCHAR(128))
-
-    time_delta = Column(Integer)
-
-    days_of_week = Column(Integer)
-
-    room = Column(VARCHAR(128))
-
-    category = Column(VARCHAR(128))
-    credit_hour_session = Column(Float)
-    hours_week = Column(Float)
-    meeting_schedule_type = Column(VARCHAR(128))
-
-
-class TBL_Restriction_Type(Base):
-    __tablename__ = "tbl_restriction_type"
-
-    restriction_type_id = Column(Integer, primary_key=True, autoincrement=True)
-    restriction_type = Column(VARCHAR(128))
-
-
-class TBL_Restriction(Base):
-    __tablename__ = "tbl_restriction"
-
-    restriction_id = Column(Integer, primary_key=True, autoincrement=True)
-    restriction = Column(VARCHAR(128))
-    must_be_in = Column(Boolean)
-
-    restriction_type = Column(Integer, ForeignKey("tbl_restriction_type.restriction_type_id"))
-
-
-class TBL_Course_Restriction(Base):
-    __tablename__ = "tbl_course_restriction"
-
-    course_data_id = Column(Integer, ForeignKey("tbl_course_data.course_data_id"), primary_key=True)
-    restriction_id = Column(Integer, ForeignKey("tbl_restriction.restriction_id"), primary_key=True)
-
-
-def create_all():
-    Base.metadata.create_all(Engine)
-
-
-def drop_all():
-    db_names = [
-        TBL_Faculty.__tablename__,
-        TBL_Class_Type.__tablename__,
-        TBL_Course.__tablename__,
-        TBL_Course_Data.__tablename__,
-        TBL_Course_Faculty.__tablename__,
-        TBL_Scrape_History.__tablename__,
-        TBL_Meeting.__tablename__,
-        TBL_Term.__tablename__,
-        TBL_Course_Restriction.__tablename__,
-        TBL_Restriction.__tablename__,
-        TBL_Restriction_Type.__tablename__,
-        TBL_School.__tablename__,
-        "tbl_word",
-        "tbl_word_course_data",
-    ]
-    for name in db_names:
-        for name in db_names:
-            try:
-                table = Table(name, Base.metadata)
-                table.drop(Engine)
-            except Exception as e:
-                if "referenced by a foreign key constraint" in str(e):
-                    continue
-                if "Unknown table" in str(e):
-                    continue
-                logger.warn(e)
 
 
 def get_current_scrape():
@@ -301,7 +36,7 @@ def get_current_scrape():
         return Scrape.Scrape_id
 
     logger.info("Inserting new scrape")
-    with Session.begin() as session:
+    with Session().begin() as session:
         result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
 
         if not result:
@@ -318,7 +53,7 @@ def get_current_scrape():
 
 
 def get_school_id(school_value: str, subdomain:str):
-    with Session.begin() as session:
+    with Session().begin() as session:
         result = session.query(TBL_School).filter_by(school_unique_value=school_value).first()
 
         if result is not None:
@@ -369,7 +104,7 @@ def add_terms(school_id: int, term_ids: list[int], term_descriptions: list[str])
     if len(term_ids) != len(term_descriptions):
         raise ValueError("term_ids must be the same length as term_descriptions")
 
-    with Session.begin() as session:
+    with Session().begin() as session:
 
         term_ids = [
             add_term_no_transaction(
@@ -412,7 +147,7 @@ def add_term_no_transaction(
 def add_courses(term_ids: list[int], course_codes: list[str], course_descriptions: list[str]):
     ids = []
 
-    with Session.begin() as session:
+    with Session().begin() as session:
         for term_id, course_code, course_description in zip(
             term_ids, course_codes, course_descriptions
         ):
@@ -440,7 +175,7 @@ def add_courses(term_ids: list[int], course_codes: list[str], course_description
 
 
 def add_course(term_id: int, course_code: str, course_description: str):
-    with Session.begin() as session:
+    with Session().begin() as session:
         result = (
             session.query(TBL_Course)
             .filter_by(term_id=term_id)
@@ -477,7 +212,7 @@ def add_course_data(
     if not restrictions:
         restrictions = [None for i in range(len(course_ids))]
 
-    with Session.begin() as session:
+    with Session().begin() as session:
         for course_id, data, restriction in zip(course_ids, datas, restrictions):
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
@@ -488,6 +223,14 @@ def add_course_data(
                 .filter_by(crn=data["courseReferenceNumber"])
                 .first()
             )
+
+            for c in (
+                'campusDescription',
+                'courseTitle',
+                'instructionalMethodDescription',
+                'subjectDescription',
+            ):
+                data[c] = dataUtil.replace_bad_escapes(data[c])
 
 
             if result:
@@ -561,19 +304,11 @@ def add_course_data(
                     wait_capacity=data["waitCapacity"],
                     wait_count=data["waitCount"],
                     wait_available=data["waitAvailable"],
-                    # cross_list=data["crossList"],
-                    # cross_list_capacity=data["crossListCapacity"],
-                    # cross_list_count=data["crossListCount"],
-                    # cross_list_available=data["crossListAvailable"],
                     credit_hour_high=data["creditHourHigh"],
                     credit_hour_low=data["creditHourLow"],
-                    # credit_hour_indicator=data["creditHourIndicator"],
                     open_section=data["openSection"],
                     link_identifier=data["linkIdentifier"],
                     is_section_linked=data["isSectionLinked"],
-                    # subject_course=data["subjectCourse"],
-                    # reserved_seat_summary=data["reservedSeatSummary"],
-                    # section_attributes=data["sectionAttributes"],
                     instructional_method=data["instructionalMethod"],
                     instructional_method_description=data["instructionalMethodDescription"],
                 )
@@ -583,7 +318,11 @@ def add_course_data(
             course_data_id = result.course_data_id
 
             for faculty in data["faculty"]:
+
+                faculty['displayName'] = dataUtil.replace_bad_escapes(faculty['displayName'])
+
                 _ = faculty["displayName"] + (faculty.get("emailAddress", "") or "")
+
                 banner_id = dataUtil.sha256_of_str(_)
 
                 if isinstance(banner_id, tuple):
@@ -648,10 +387,10 @@ def add_course_data(
                     crn=crn,
                     term_id=term_id,
                     time_delta=time_delta_days,
-                    building=useful_data["building"],
-                    building_description=useful_data["buildingDescription"],
+                    building=dataUtil.replace_bad_escapes(useful_data["building"]),
+                    building_description=dataUtil.replace_bad_escapes(useful_data["buildingDescription"]),
                     campus=useful_data["campus"],
-                    campus_description=useful_data["campusDescription"],
+                    campus_description=dataUtil.replace_bad_escapes(useful_data["campusDescription"]),
                     meeting_type=useful_data["meetingType"],
                     meeting_type_description=useful_data["meetingTypeDescription"],
                     start_date=start_date,

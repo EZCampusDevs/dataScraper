@@ -129,6 +129,9 @@ def ask_for_confirmation(prompt: str):
 
 
 def replace_bad_escapes(value):
+
+    if value is None:return 
+
     value = value.replace("&amp;", "&").replace("&#39;", "'")
 
     return value

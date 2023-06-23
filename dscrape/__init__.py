@@ -145,12 +145,13 @@ def main():
 
     database.init_database(
         use_mysql=True,
-        database_port=parsed_args.db_port,
-        database_host=parsed_args.host,
-        database_name=parsed_args.db_name,
-        database_user=parsed_args.username,
-        database_pass=parsed_args.password,
+        db_port=parsed_args.db_port,
+        db_host=parsed_args.host,
+        db_name=parsed_args.db_name,
+        db_user=parsed_args.username,
+        db_pass=parsed_args.password,
         create=not parsed_args.clean,
+        check_env=False,
     )
 
     if parsed_args.clean:
