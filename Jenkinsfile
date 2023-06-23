@@ -16,7 +16,7 @@ pipeline {
                             ./build.sh
                             ''', execTimeout: 120000, flatten: false, makeEmptyDirs: true, 
                             noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: 'pipeline_datascraper', remoteDirectorySDF: false, 
-                            removePrefix: '', sourceFiles: 'Dockerfile, requirements.txt, build.sh, deploy.sh, .env, entrypoint.sh, dscrape/**')
+                            removePrefix: '', sourceFiles: 'Dockerfile, requirements.txt, build.sh, deploy.sh, .env, entrypoint.sh, dscrape/**, py_core/**')
                         ], 
                         usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)
                     ])

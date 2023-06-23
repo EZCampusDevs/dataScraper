@@ -5,6 +5,7 @@ ARG DIR="/opt/dscrape"
 RUN mkdir $DIR
 
 COPY ./dscrape $DIR
+COPY ./py_core $DIR
 COPY ./requirements.txt $DIR
 COPY ./entrypoint.sh $DIR
 
