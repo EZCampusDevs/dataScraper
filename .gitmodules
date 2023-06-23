@@ -1,0 +1,3 @@
+[submodule "py_core"]
+	path = py_core
+	url = https://github.com/EZCampusDevs/py_core.git
