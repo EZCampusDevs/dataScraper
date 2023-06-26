@@ -1,4 +1,5 @@
 import traceback
+import logging
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -7,7 +8,8 @@ from dotenv import load_dotenv
 from . import dataUtil
 from . import extractor
 from . import database
-from . import logger
+
+from py_core import logging_util
 
 
 def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=False):
@@ -17,9 +19,9 @@ def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=Fal
         dumper.scrape_and_dump(debug_break_1)
 
     except Exception as e:
-        logger.error("Unknown error has occured!")
-        logger.error(e)
-        logger.error(traceback.format_exc())
+        logging.error("Unknown error has occured!")
+        logging.error(e)
+        logging.error(traceback.format_exc())
 
 
 def list_extractors():
@@ -77,7 +79,8 @@ def get_and_prase_args(args):
 
 
 def main():
-    logger.create_setup_logger(log_file="logs.log")
+    logging_util.setup_logging()
+    logging_util.add_unhandled_exception_hook()
 
     load_dotenv()
 
@@ -91,10 +94,10 @@ def main():
     if parsed_args.password:
         _ = parsed_args.password
         parsed_args.password = "*" * len(_)
-        logger.debug(parsed_args)
+        logging.debug(parsed_args)
         parsed_args.password = _
     else:
-        logger.debug(parsed_args)
+        logging.debug(parsed_args)
 
     if not parsed_args.db_name:
         parsed_args.db_name = str(os.getenv("db_name", "hibernate_db"))
@@ -114,13 +117,13 @@ def main():
     if not parsed_args.threads:
         parsed_args.threads = 5
     elif not parsed_args.threads.isdigit():
-        logger.error("Threads argument must be an integer!")
+        logging.error("Threads argument must be an integer!")
         return 1
     else:
         parsed_args.threads = int(parsed_args.threads)
 
         if parsed_args.threads <= 0:
-            logger.error("Thread count must be larger than 0!")
+            logging.error("Thread count must be larger than 0!")
             return 1
 
     extractors_to_use = extractor.extractors.copy()
@@ -132,25 +135,25 @@ def main():
             print("Could not parse any indicies. Exiting...")
             return 1
 
-        logger.debug(f"Parsed index: {index}")
+        logging.debug(f"Parsed index: {index}")
 
         new_extractors = [
             extractors_to_use[i] for i in index if i >= 0 and i < len(extractors_to_use)
         ]
 
         if len(new_extractors) != len(index):
-            logger.warning("Length missmatch detected! Invalid index will be ignored.")
+            logging.warning("Length missmatch detected! Invalid index will be ignored.")
 
         extractors_to_use = new_extractors
 
-    logger.debug(extractors_to_use)
+    logging.debug(extractors_to_use)
 
-    logger.info(f"Read hostname {parsed_args.host}")
-    logger.info(f"Read port {parsed_args.db_port}")
-    logger.info(f"Read database name {parsed_args.db_name}")
-    logger.info(f"Read username {parsed_args.username}")
-    logger.info(f"Read password {'*'*len(parsed_args.password)}")
-    logger.info(f"Read threads {parsed_args.threads}")
+    logging.info(f"Read hostname {parsed_args.host}")
+    logging.info(f"Read port {parsed_args.db_port}")
+    logging.info(f"Read database name {parsed_args.db_name}")
+    logging.info(f"Read username {parsed_args.username}")
+    logging.info(f"Read password {'*'*len(parsed_args.password)}")
+    logging.info(f"Read threads {parsed_args.threads}")
 
     database.init_database(
         use_mysql=True,
@@ -184,7 +187,7 @@ def main():
 
         elapsed = ended_at - started_at
 
-        logger.info(f"Finished after {elapsed:.6f} seconds")
+        logging.info(f"Finished after {elapsed:.6f} seconds")
 
 
 def main2():

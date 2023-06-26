@@ -7,9 +7,9 @@ from datetime import datetime
 from .common import CourseScraper
 
 from .. import dataUtil as DU
-from .. import logger
 from .. import database
 
+import logging
 
 """
 
@@ -84,7 +84,7 @@ class CourseDumper(CourseScraper):
         ):
             return
 
-        logger.info(f"{self.log_prefix} Refreshing terms auth")
+        logging.info(f"{self.log_prefix} Refreshing terms auth")
 
         self.session.get(self.term_auth_url, timeout=self.auth_timeout_seconds)
 
@@ -100,11 +100,11 @@ class CourseDumper(CourseScraper):
         if r.status_code == 200:
             return r.json()
 
-        logger.warning(
+        logging.warning(
             f"{self.log_prefix} get_json_terms got status code {r.status_code} with reason: {r.reason}"
         )
-        logger.warning(r)
-        logger.warning(r.text)
+        logging.warning(r)
+        logging.warning(r.text)
 
         return {}
 
@@ -121,7 +121,7 @@ class CourseDumper(CourseScraper):
         if r.status_code == 200:
             return r.json()
 
-        logger.warning(
+        logging.warning(
             f"{self.log_prefix} get_json_course_codes got status code {r.status_code} with reason: {r.reason}"
         )
 
@@ -164,7 +164,7 @@ class CourseDumper(CourseScraper):
                 yield j
                 continue
 
-            logger.warning(
+            logging.warning(
                 f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}"
             )
             continue
@@ -215,7 +215,7 @@ class CourseDumper(CourseScraper):
             else:
                 if i.text == "Not all restrictions are applicable.":
                     continue
-                logger.warn(f"Unknown span while parsing restrictions: {i}")
+                logging.warn(f"Unknown span while parsing restrictions: {i}")
 
         return restrictions
 
@@ -245,44 +245,44 @@ class CourseDumper(CourseScraper):
     def scrape_and_dump(self, debug_break_1=False):
         terms = self.get_json_terms()
 
-        logger.info(f"Scraping using dumper: {self}")
+        logging.info(f"Scraping using dumper: {self}")
 
         real_term_id = [i["code"] for i in terms]
         term_desc = [i["description"] for i in terms]
 
-        logger.info(f"Found term {real_term_id}")
+        logging.info(f"Found term {real_term_id}")
 
         term_id = database.add_terms(self.school_id, real_term_id, term_desc)
 
         currentYear = (datetime.now().year - 1) * 100
-        logger.info(f"Current term year: {currentYear}")
+        logging.info(f"Current term year: {currentYear}")
 
         for real_id, internal_id in zip(real_term_id, term_id):
             if int(real_id) < currentYear:
-                logger.info(f"Skipping term {real_id} because it should be out of date")
+                logging.info(f"Skipping term {real_id} because it should be out of date")
                 continue
 
-            logger.info(f"Fetching term {real_id}")
+            logging.info(f"Fetching term {real_id}")
             course_codes = self.get_json_course_codes(real_id, "")
 
             course_code = [i["code"] for i in course_codes]
             course_desc = [i["description"] for i in course_codes]
 
-            logger.debug(f"Got course codes {course_code}")
+            logging.debug(f"Got course codes {course_code}")
 
             i = database.add_courses(
                 [internal_id for i in range(len(course_desc))], course_code, course_desc
             )
 
-            logger.info(f"Fetching course data for term and {len(course_code)} courses")
+            logging.info(f"Fetching course data for term and {len(course_code)} courses")
             for course_data in self.get_json_course_data(real_id, course_code):
                 if not course_data:
-                    logger.info("Could not get course data")
+                    logging.info("Could not get course data")
                     continue
 
                 course_data = course_data["data"]
                 course_data_str = str(course_data)[0:200]
-                logger.debug(f"Course data gotten: {course_data_str}")
+                logging.debug(f"Course data gotten: {course_data_str}")
 
                 # NOTE: assuming course_code and i are in order (they should be), this works fine
                 #       otherwise we probably need to query the db for every course data we insert
@@ -290,7 +290,7 @@ class CourseDumper(CourseScraper):
                 proper_course_id = [course_id_map[i["subjectCourse"]] for i in course_data]
                 # restrictions = [dumper.get_course_restrictions(id, i['courseReferenceNumber']) for i in course_data]
 
-                logger.info(
+                logging.info(
                     f"proper_course_id length = {len(proper_course_id)}, course_data length = {len(course_data)}"
                 )
 
@@ -301,7 +301,7 @@ class CourseDumper(CourseScraper):
                 # database.add_course_data(proper_course_id, course_data, restrictions)
 
             if debug_break_1:
-                logger.error("DEBUG BREAK")
+                logging.error("DEBUG BREAK")
                 return
 
 

@@ -3,7 +3,7 @@ from requests.exceptions import RequestException, ConnectionError, Timeout
 
 import time
 
-from .. import logger
+import logging
 
 
 class Requester:
@@ -35,7 +35,7 @@ class Requester:
                 if tries > self.retries:
                     return None
 
-                logger.debug(f"Retrying {method} to {url} after {tries} seconds")
+                logging.debug(f"Retrying {method} to {url} after {tries} seconds")
 
                 time.sleep(tries)
 
@@ -49,11 +49,11 @@ class Requester:
                     **kwargs,
                 )
             except (ConnectionError, Timeout) as exc:
-                logger.warning(exc)
+                logging.warning(exc)
                 continue
 
             except Exception as exc:
-                logger.error(exc)
+                logging.error(exc)
                 return None
 
             return response

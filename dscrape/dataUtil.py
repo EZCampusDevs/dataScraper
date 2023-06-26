@@ -8,7 +8,7 @@ import dateutil.parser as datePasrer
 
 
 from . import constants
-from . import logger
+import logging
 
 
 def time_now_precise():
@@ -37,66 +37,6 @@ def sha256_of_str(data: str):
     return sha.digest()
 
 
-def get_weekdays_int(data: dict[str, bool]):
-    value = 0
-
-    if data.get("monday", False):
-        value |= constants.MONDAY
-
-    if data.get("tuesday", False):
-        value |= constants.TUESDAY
-
-    if data.get("wednesday", False):
-        value |= constants.WEDNESDAY
-
-    if data.get("thursday", False):
-        value |= constants.THURSDAY
-
-    if data.get("friday", False):
-        value |= constants.FRIDAY
-
-    if data.get("saturday", False):
-        value |= constants.SATURDAY
-
-    if data.get("sunday", False):
-        value |= constants.SUNDAY
-
-    return value
-
-
-def get_weekdays_int_bad(data: dict[str, bool]):
-    value = 0
-
-    for key, value in data.items():
-        if not value or not isinstance(key, str):
-            continue
-
-        l_key = key.lower()
-
-        if l_key in ("mon", "monday"):
-            value |= constants.MONDAY
-
-        elif l_key in ("tue", "tuesday"):
-            value |= constants.TUESDAY
-
-        elif l_key in ("wed", "wednesday"):
-            value |= constants.WEDNESDAY
-
-        elif l_key in ("thu", "thursday"):
-            value |= constants.THURSDAY
-
-        elif l_key in ("fri", "friday"):
-            value |= constants.FRIDAY
-
-        elif l_key in ("sat", "saturday"):
-            value |= constants.SATURDAY
-
-        elif l_key in ("sun", "sunday"):
-            value |= constants.SUNDAY
-
-    return value
-
-
 def parse_date(date: str):
     try:
         return datetime.strptime(date, "%m/%d/%Y").date()
@@ -112,8 +52,8 @@ def parse_date(date: str):
         return datePasrer.parse(date).date()
 
     except Exception as e:
-        logger.error(e)
-        logger.error(traceback.format_exc())
+        logging.error(e)
+        logging.error(traceback.format_exc())
 
         raise e
 
@@ -132,9 +72,7 @@ def replace_bad_escapes(value):
     if value is None:
         return
 
-    value = value.replace("&amp;", "&").replace("&#39;", "'")
-
-    return value
+    return value.replace("&amp;", "&").replace("&#39;", "'")
 
 
 def parse_range_input(value: str):

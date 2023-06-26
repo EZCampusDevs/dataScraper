@@ -1,59 +1,46 @@
-from sqlalchemy import Date, Float, create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session as SessionObj
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import event
-from sqlalchemy import (
-    Column,
-    Table,
-    Integer,
-    Boolean,
-    TIMESTAMP,
-    LargeBinary,
-    BigInteger,
-    BINARY,
-    VARCHAR,
-    ForeignKey,
-)
-from sqlalchemy import UniqueConstraint
 import os
 import datetime
+import logging
 
 from . import dataUtil
-from . import logger
-
 
 from py_core.db import *
 from py_core.db.db_tables import *
-
+from py_core import general as py_core_general
 
 class Scrape:
     Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
     Scrape_id = -1
 
 
-def get_current_scrape():
+def get_current_scrape_nt(session: SessionObj):
+
     if Scrape.Scrape_id != -1:
         return Scrape.Scrape_id
 
-    logger.info("Inserting new scrape")
+    logging.info("Inserting new scrape")
+
+    result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
+
+    if not result:
+        result = TBL_Scrape_History(scrape_time=Scrape.Scrape_Time, has_been_indexed=False)
+
+        session.add(result)
+        session.flush()
+
+    Scrape.Scrape_id = result.scrape_id
+
+    logging.info(f"Current Scrape ID: {Scrape.Scrape_id}")
+
+    return result.scrape_id
+
+def get_current_scrape():
 
     session: SessionObj
     with Session().begin() as session:
-        result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
 
-        if not result:
-            result = TBL_Scrape_History(scrape_time=Scrape.Scrape_Time, has_been_indexed=False)
-
-            session.add(result)
-            session.flush()
-
-        Scrape.Scrape_id = result.scrape_id
-
-        logger.info(f"Current Scrape ID: {Scrape.Scrape_id}")
-
-        return result.scrape_id
+        return get_current_scrape_nt(session)
 
 
 def get_school_id(school_value: str, subdomain: str):
@@ -249,7 +236,7 @@ def add_course_data(
                         or result.subject_long != data["subjectDescription"]
                         or result.class_type_id != class_type_id
                     ):
-                        logger.info(
+                        logging.info(
                             f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database! Updating..."
                         )
                         result.scrape_id = get_current_scrape()
@@ -373,7 +360,7 @@ def add_course_data(
                 crn = useful_data["courseReferenceNumber"]
                 real_term_id = dataUtil.parse_int(useful_data["term"])
                 if real_term_id == -1:
-                    logger.warning(
+                    logging.warning(
                         f"Got bad term_id of {useful_data['term']} course_id={course_id} for meeting {meeting}"
                     )
                     continue
@@ -410,7 +397,7 @@ def add_course_data(
                     end_date=end_date,
                     begin_time=useful_data["beginTime"],
                     end_time=useful_data["endTime"],
-                    days_of_week=dataUtil.get_weekdays_int(useful_data),
+                    days_of_week=py_core_general.encode_days_of_week(useful_data),
                     room=useful_data["room"],
                     category=useful_data["category"],
                     credit_hour_session=useful_data["creditHourSession"],
