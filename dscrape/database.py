@@ -1,5 +1,6 @@
 from sqlalchemy import Date, Float, create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import Session as SessionObj
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event
@@ -23,8 +24,9 @@ from . import dataUtil
 from . import logger
 
 
-from py_core.db import * 
+from py_core.db import *
 from py_core.db.db_tables import *
+
 
 class Scrape:
     Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
@@ -36,6 +38,8 @@ def get_current_scrape():
         return Scrape.Scrape_id
 
     logger.info("Inserting new scrape")
+
+    session: SessionObj
     with Session().begin() as session:
         result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
 
@@ -52,15 +56,15 @@ def get_current_scrape():
         return result.scrape_id
 
 
-def get_school_id(school_value: str, subdomain:str):
+def get_school_id(school_value: str, subdomain: str):
+    session: SessionObj
     with Session().begin() as session:
         result = session.query(TBL_School).filter_by(school_unique_value=school_value).first()
 
         if result is not None:
             return result.school_id
 
-        new_result = TBL_School(school_unique_value=school_value,
-                                subdomain=subdomain)
+        new_result = TBL_School(school_unique_value=school_value, subdomain=subdomain)
         session.add(new_result)
 
         session.flush()
@@ -68,7 +72,7 @@ def get_school_id(school_value: str, subdomain:str):
         return new_result.school_id
 
 
-def get_restriction_type_from_str(value: str, session):
+def get_restriction_type_from_str(value: str, session: SessionObj):
     # Try to find the class_type_id for the given value
     restriction_type_id = (
         session.query(TBL_Restriction_Type).filter_by(restriction_type=value).first()
@@ -85,9 +89,9 @@ def get_restriction_type_from_str(value: str, session):
     return new_class_type.restriction_type_id
 
 
-def get_class_type_from_str(value: str, session):
-    # Try to find the class_type_id for the given value
-    class_type_id = session.query(TBL_Class_Type).filter_by(class_type=value).first()
+def get_class_type_from_str(value: str, session: SessionObj):
+    with session.no_autoflush:
+        class_type_id = session.query(TBL_Class_Type).filter_by(class_type=value).first()
 
     if class_type_id is not None:
         return class_type_id.class_type_id
@@ -104,29 +108,29 @@ def add_terms(school_id: int, term_ids: list[int], term_descriptions: list[str])
     if len(term_ids) != len(term_descriptions):
         raise ValueError("term_ids must be the same length as term_descriptions")
 
+    session: SessionObj
     with Session().begin() as session:
-
         term_ids = [
-            add_term_no_transaction(
-                school_id, term_id, term_description, session
-            )
+            add_term_no_transaction(school_id, term_id, term_description, session)
             for term_id, term_description in zip(term_ids, term_descriptions)
-        ]        
+        ]
 
         return term_ids
 
 
 def add_term_no_transaction(
-    school_id: int, real_term_id: int, term_description: str, session: sessionmaker
+    school_id: int, real_term_id: int, term_description: str, session: SessionObj
 ):
     real_term_id = int(real_term_id)
     school_id = int(school_id)
-    result = (
-        session.query(TBL_Term)
-        .filter_by(real_term_id=real_term_id)
-        .filter_by(school_id=school_id)
-        .first()
-    )
+
+    with session.no_autoflush:
+        result = (
+            session.query(TBL_Term)
+            .filter_by(real_term_id=real_term_id)
+            .filter_by(school_id=school_id)
+            .first()
+        )
 
     if not result:
         result = TBL_Term(
@@ -142,11 +146,10 @@ def add_term_no_transaction(
     return result.term_id
 
 
-
-
 def add_courses(term_ids: list[int], course_codes: list[str], course_descriptions: list[str]):
     ids = []
 
+    session: SessionObj
     with Session().begin() as session:
         for term_id, course_code, course_description in zip(
             term_ids, course_codes, course_descriptions
@@ -175,6 +178,7 @@ def add_courses(term_ids: list[int], course_codes: list[str], course_description
 
 
 def add_course(term_id: int, course_code: str, course_description: str):
+    session: SessionObj
     with Session().begin() as session:
         result = (
             session.query(TBL_Course)
@@ -212,63 +216,65 @@ def add_course_data(
     if not restrictions:
         restrictions = [None for i in range(len(course_ids))]
 
+    session: SessionObj
     with Session().begin() as session:
         for course_id, data, restriction in zip(course_ids, datas, restrictions):
             # if something goes wrong here it's gonna frick everything up
             class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
 
-            result = (
-                session.query(TBL_Course_Data)
-                .filter_by(course_id=course_id)
-                .filter_by(crn=data["courseReferenceNumber"])
-                .first()
-            )
+            with session.no_autoflush:
+                result = (
+                    session.query(TBL_Course_Data)
+                    .filter_by(course_id=course_id)
+                    .filter_by(crn=data["courseReferenceNumber"])
+                    .first()
+                )
 
             for c in (
-                'campusDescription',
-                'courseTitle',
-                'instructionalMethodDescription',
-                'subjectDescription',
+                "campusDescription",
+                "courseTitle",
+                "instructionalMethodDescription",
+                "subjectDescription",
             ):
                 data[c] = dataUtil.replace_bad_escapes(data[c])
 
-
             if result:
-                if (
-                    result.campus_description != data["campusDescription"]
-                    or result.course_title != data["courseTitle"]
-                    or result.instructional_method_description
-                    != data["instructionalMethodDescription"]
-                    or result.subject != data["subject"]
-                    or result.subject_long != data["subjectDescription"]
-                    or result.class_type_id != class_type_id
-                ):
-                    logger.info(
-                        f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database! Updating..."
-                    )
-                    result.scrape_id = (get_current_scrape(),)
-                result.id = data["id"]
-                result.crn = data["courseReferenceNumber"]
-                result.course_title = data["courseTitle"]
-                result.subject = data["subject"]
-                result.subject_long = data["subjectDescription"]
-                result.sequence_number = str(data["sequenceNumber"])
-                result.campus_description = data["campusDescription"]
-                result.class_type_id = class_type_id
-                result.credit_hours = data["creditHours"]
-                result.maximum_enrollment = data["maximumEnrollment"]
-                result.enrollment = data["enrollment"]
-                result.seats_available = data["seatsAvailable"]
-                result.wait_capacity = data["waitCapacity"]
-                result.wait_count = data["waitCount"]
-                result.wait_available = data["waitAvailable"]
-                result.credit_hour_high = data["creditHourHigh"]
-                result.credit_hour_low = data["creditHourLow"]
-                result.open_section = data["openSection"]
-                result.link_identifier = data["linkIdentifier"]
-                result.is_section_linked = data["isSectionLinked"]
-                result.instructional_method = data["instructionalMethod"]
-                result.instructional_method_description = data["instructionalMethodDescription"]
+                with session.no_autoflush:
+                    if (
+                        result.campus_description != data["campusDescription"]
+                        or result.course_title != data["courseTitle"]
+                        or result.instructional_method_description
+                        != data["instructionalMethodDescription"]
+                        or result.subject != data["subject"]
+                        or result.subject_long != data["subjectDescription"]
+                        or result.class_type_id != class_type_id
+                    ):
+                        logger.info(
+                            f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database! Updating..."
+                        )
+                        result.scrape_id = get_current_scrape()
+                    result.id = data["id"]
+                    result.crn = data["courseReferenceNumber"]
+                    result.course_title = data["courseTitle"]
+                    result.subject = data["subject"]
+                    result.subject_long = data["subjectDescription"]
+                    result.sequence_number = str(data["sequenceNumber"])
+                    result.campus_description = data["campusDescription"]
+                    result.class_type_id = class_type_id
+                    result.credit_hours = data["creditHours"]
+                    result.maximum_enrollment = data["maximumEnrollment"]
+                    result.enrollment = data["enrollment"]
+                    result.seats_available = data["seatsAvailable"]
+                    result.wait_capacity = data["waitCapacity"]
+                    result.wait_count = data["waitCount"]
+                    result.wait_available = data["waitAvailable"]
+                    result.credit_hour_high = data["creditHourHigh"]
+                    result.credit_hour_low = data["creditHourLow"]
+                    result.open_section = data["openSection"]
+                    result.link_identifier = data["linkIdentifier"]
+                    result.is_section_linked = data["isSectionLinked"]
+                    result.instructional_method = data["instructionalMethod"]
+                    result.instructional_method_description = data["instructionalMethodDescription"]
             else:
                 result = TBL_Course_Data(
                     # course code
@@ -318,8 +324,7 @@ def add_course_data(
             course_data_id = result.course_data_id
 
             for faculty in data["faculty"]:
-
-                faculty['displayName'] = dataUtil.replace_bad_escapes(faculty['displayName'])
+                faculty["displayName"] = dataUtil.replace_bad_escapes(faculty["displayName"])
 
                 _ = faculty["displayName"] + (faculty.get("emailAddress", "") or "")
 
@@ -328,7 +333,8 @@ def add_course_data(
                 if isinstance(banner_id, tuple):
                     raise Exception("IT IS SOMEHOW A TUPLE?????")
 
-                result = session.query(TBL_Faculty).filter_by(banner_id=banner_id).first()
+                with session.no_autoflush:
+                    result = session.query(TBL_Faculty).filter_by(banner_id=banner_id).first()
 
                 if not result:
                     result = TBL_Faculty(
@@ -344,12 +350,13 @@ def add_course_data(
 
                 faculty_id = result.faculty_id
 
-                result = (
-                    session.query(TBL_Course_Faculty)
-                    .filter_by(course_data_id=course_data_id)
-                    .filter_by(faculty_id=faculty_id)
-                    .first()
-                )
+                with session.no_autoflush:
+                    result = (
+                        session.query(TBL_Course_Faculty)
+                        .filter_by(course_data_id=course_data_id)
+                        .filter_by(faculty_id=faculty_id)
+                        .first()
+                    )
 
                 if not result:
                     result = TBL_Course_Faculty(
@@ -371,7 +378,9 @@ def add_course_data(
                     )
                     continue
 
-                term_id = add_term_no_transaction(school_id, real_term_id, "UNKNOWN AT TIME OF ADDING", session)
+                term_id = add_term_no_transaction(
+                    school_id, real_term_id, "UNKNOWN AT TIME OF ADDING", session
+                )
 
                 start_date = dataUtil.parse_date(useful_data["startDate"])
                 end_date = dataUtil.parse_date(useful_data["endDate"])
@@ -388,9 +397,13 @@ def add_course_data(
                     term_id=term_id,
                     time_delta=time_delta_days,
                     building=dataUtil.replace_bad_escapes(useful_data["building"]),
-                    building_description=dataUtil.replace_bad_escapes(useful_data["buildingDescription"]),
+                    building_description=dataUtil.replace_bad_escapes(
+                        useful_data["buildingDescription"]
+                    ),
                     campus=useful_data["campus"],
-                    campus_description=dataUtil.replace_bad_escapes(useful_data["campusDescription"]),
+                    campus_description=dataUtil.replace_bad_escapes(
+                        useful_data["campusDescription"]
+                    ),
                     meeting_type=useful_data["meetingType"],
                     meeting_type_description=useful_data["meetingTypeDescription"],
                     start_date=start_date,
@@ -415,7 +428,8 @@ def add_course_data(
 
                 to_insert.meeting_hash = meeting_hash
 
-                result = session.query(TBL_Meeting).filter_by(meeting_hash=meeting_hash).first()
+                with session.no_autoflush:
+                    result = session.query(TBL_Meeting).filter_by(meeting_hash=meeting_hash).first()
 
                 if not result:
                     session.add(to_insert)
@@ -426,7 +440,9 @@ def add_course_data(
         session.flush()
 
 
-def add_restriction_nt(course_data_id: int, restriction: dict[str, list[dict[str, bool]]], session):
+def add_restriction_nt(
+    course_data_id: int, restriction: dict[str, list[dict[str, bool]]], session: SessionObj
+):
     for key, value in restriction.items():
         restriction_type_id = get_restriction_type_from_str(key, session)
 

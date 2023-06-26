@@ -23,15 +23,12 @@ def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=Fal
 
 
 def list_extractors():
-
     max_width = len(str(len(extractor.extractors)))
 
     for i, s in enumerate(extractor.extractors):
-
         padding = " " * (max_width - len(str(i)))
 
         print(f"{padding}{i} : {s.SCHOOL_VALUE}")
-
 
 
 def get_and_prase_args(args):
@@ -55,14 +52,27 @@ def get_and_prase_args(args):
     general.add_argument(
         "-d", "--debug", dest="debug", action="store_true", help="Run the debug main method"
     )
-    general.add_argument("-l", "--list-scrapers", action="store_true",dest="listscrape", help="List the scrapers and their number.")
-    general.add_argument("-s", "--scrapers", dest="scrape", help="The number to indicate which scrapers to run. Can be csv (1,2,3...), can be range, (1,2,3-5)")
+    general.add_argument(
+        "-l",
+        "--list-scrapers",
+        action="store_true",
+        dest="listscrape",
+        help="List the scrapers and their number.",
+    )
+    general.add_argument(
+        "-s",
+        "--scrapers",
+        dest="scrape",
+        help="The number to indicate which scrapers to run. Can be csv (1,2,3...), can be range, (1,2,3-5)",
+    )
     general.add_argument("-p", "--password", dest="password", help="The database password")
     general.add_argument("-u", "--username", dest="username", help="The database username")
     general.add_argument("-H", "--host", dest="host", help="The database host")
     general.add_argument("-n", "--db_name", dest="db_name", help="The database name")
     general.add_argument("-P", "--port", dest="db_port", help="The database port")
-    general.add_argument("-t", "--threads", dest="threads", help="The number of extractors to run at a single time")
+    general.add_argument(
+        "-t", "--threads", dest="threads", help="The number of extractors to run at a single time"
+    )
     return parser.parse_args(args)
 
 
@@ -74,7 +84,6 @@ def main():
     parsed_args = get_and_prase_args(sys.argv[1:])
 
     if parsed_args.listscrape:
-
         list_extractors()
 
         return
@@ -114,11 +123,9 @@ def main():
             logger.error("Thread count must be larger than 0!")
             return 1
 
-
     extractors_to_use = extractor.extractors.copy()
 
     if parsed_args.scrape:
-
         index = dataUtil.parse_range_input(parsed_args.scrape)
 
         if not index:
@@ -127,7 +134,9 @@ def main():
 
         logger.debug(f"Parsed index: {index}")
 
-        new_extractors = [extractors_to_use[i] for i in index if i >= 0 and i < len(extractors_to_use)]
+        new_extractors = [
+            extractors_to_use[i] for i in index if i >= 0 and i < len(extractors_to_use)
+        ]
 
         if len(new_extractors) != len(index):
             logger.warning("Length missmatch detected! Invalid index will be ignored.")
@@ -179,7 +188,6 @@ def main():
 
 
 def main2():
-
     school = extractor.UOIT_Dumper
 
     school().scrape_and_dump(True)

@@ -1,4 +1,4 @@
-import re 
+import re
 import time
 import hashlib
 import traceback
@@ -129,15 +129,15 @@ def ask_for_confirmation(prompt: str):
 
 
 def replace_bad_escapes(value):
-
-    if value is None:return 
+    if value is None:
+        return
 
     value = value.replace("&amp;", "&").replace("&#39;", "'")
 
     return value
 
 
-def parse_range_input(value:str):
+def parse_range_input(value: str):
     """
     Parses a csv of numbers and ranges
 
@@ -152,7 +152,6 @@ def parse_range_input(value:str):
     REGEX = re.compile(r"(\d+\s*\-\s*\d+)|(\d+)")
 
     for value in values:
-
         m = REGEX.match(value.strip())
 
         if not m:
@@ -162,7 +161,6 @@ def parse_range_input(value:str):
         single_num = m.group(2)
 
         if range_pred:
-
             _ = [int(i.strip()) for i in range_pred.split("-")]
 
             start, stop = _
@@ -176,7 +174,6 @@ def parse_range_input(value:str):
                 output_nums.add(i)
 
         if single_num:
-
             _ = int(single_num.strip())
 
             output_nums.add(_)
