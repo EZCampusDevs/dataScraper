@@ -42,7 +42,7 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 # this would double the speed because it would half the requests, higher this is the better
 # UPDATE: 1000 is too long, must be lower than that
 # NOTE: url should be less than 8000 characters, otherwise server will drop it
-COURSE_CODE_REQUEST_AMOUNT = 700
+COURSE_CODE_REQUEST_AMOUNT = 100
 
 
 MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
@@ -142,6 +142,10 @@ class CourseDumper(CourseScraper):
 
             else:
                 continue
+
+            logging.debug(f"Size of course codes sublist {len(sublist)}")
+            logging.debug(f"Size of course codes sublist {len(sublist)}")
+            logging.debug(f"Size of course codes sublist {len(sublist)}")
 
             self.session.get(
                 url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
