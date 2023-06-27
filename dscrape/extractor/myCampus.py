@@ -42,7 +42,7 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 # this would double the speed because it would half the requests, higher this is the better
 # UPDATE: 1000 is too long, must be lower than that
 # NOTE: url should be less than 8000 characters, otherwise server will drop it
-COURSE_CODE_REQUEST_AMOUNT = 100
+COURSE_CODE_REQUEST_AMOUNT = 150
 
 
 MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
@@ -128,9 +128,85 @@ class CourseDumper(CourseScraper):
         return {}
 
     def get_json_course_data(
-        self, term_id: str, course_codes: list[str] = None, max_count: int = MAX_COUNT
+        self, term_id: str, course_codes: list[str] = None, max_count: int = MAX_COUNT,
+        retry_amount=5
     ):
         self.auth_terms()
+
+        # api only returns at most 500 course datas
+        API_COURSE_DATAS_LIMIT = 500
+
+        retries = 0
+        course_code_count = len(course_codes)
+        course_code_send_amount = COURSE_CODE_REQUEST_AMOUNT
+
+        sent_course_codes = 0
+
+        while sent_course_codes < course_code_count:
+
+
+            if retries > retry_amount:
+                raise Exception("Max retries exceeded while trying to get course_data")
+
+            sublist = course_codes[sent_course_codes : sent_course_codes + course_code_send_amount]
+
+            if not sublist:
+                logging.warning(f"Course code sublist is empty??? sent_course_codes: {sent_course_codes}, course_codes_count: {course_code_count}")
+                retries += 1
+                continue
+
+            logging.debug(f"Fetching course datas for {len(sublist)} course codes")
+
+            course_codes_request = "%2C".join(code.upper() for code in sublist)
+
+            self.session.get(
+                url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
+                timeout=5,
+            )
+
+            url = COURSE_DATA_GET_URL.format(
+                HOST=self.hostname,
+                MEP_CODE=self.mep_code,
+                TERM_ID=term_id,
+                COURSE_CODES=course_codes_request,
+                MAX_COUNT=max_count,
+            )
+
+            r = self.request("get", url)
+
+
+            if r.status_code != 200:
+                logging.warning(
+                f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}\nRetrying..."
+)
+                retries += 1
+                continue
+
+            j = r.json()
+
+            data = j.get('data', None)
+
+            if not data:
+                logging.warning(f"Got json response for course data but no data??? {j}\nRetrying...")
+                retries += 1
+                continue
+
+            if len(data) >= API_COURSE_DATAS_LIMIT:
+                course_code_send_amount = course_code_send_amount // 2
+                logging.warning(f"Got {API_COURSE_DATAS_LIMIT} course datas, which is the known api truncation point, retrying with {course_code_send_amount} course codes...")
+
+                if course_code_send_amount == 0:
+                    raise Exception("course_code_send_amount has halved until 0!")
+
+                continue
+
+            sent_course_codes += len(sublist)
+
+            yield j
+
+        return {}
+
+
 
         course_code_count = COURSE_CODE_REQUEST_AMOUNT
         for i in range(0, len(course_codes), course_code_count):
@@ -143,9 +219,6 @@ class CourseDumper(CourseScraper):
             else:
                 continue
 
-            logging.debug(f"Size of course codes sublist {len(sublist)}")
-            logging.debug(f"Size of course codes sublist {len(sublist)}")
-            logging.debug(f"Size of course codes sublist {len(sublist)}")
 
             self.session.get(
                 url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
@@ -164,6 +237,11 @@ class CourseDumper(CourseScraper):
 
             if r.status_code == 200:
                 j = r.json()
+
+                if 'data' in j:
+
+                    if len(j['data']) >= API_COURSE_DATAS_LIMIT:
+                        continue
 
                 yield j
                 continue
