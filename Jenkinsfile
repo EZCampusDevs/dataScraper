@@ -11,8 +11,8 @@ pipeline {
 
 
             writeFile file: './env.sh', text: """#!/bin/sh
-MYSQL_USERNAME_1="${USERNAME_1}" 
-MYSQL_USER_PASS_1="${PASSWORD_1}" 
+username="${USERNAME_1}" 
+password="${PASSWORD_1}" 
               """
 
           }

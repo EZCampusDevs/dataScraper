@@ -100,7 +100,7 @@ def main():
         logging.debug(parsed_args)
 
     if not parsed_args.db_name:
-        parsed_args.db_name = str(os.getenv("db_name", "hibernate_db"))
+        parsed_args.db_name = str(os.getenv("db_name", "ezcampus_db"))
 
     if not parsed_args.host:
         parsed_args.host = str(os.getenv("host", "localhost"))
