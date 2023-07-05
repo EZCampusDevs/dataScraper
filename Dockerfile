@@ -8,6 +8,7 @@ COPY ./dscrape $DIR
 COPY ./py_core $DIR/../py_core
 COPY ./requirements.txt $DIR
 COPY ./entrypoint.sh $DIR
+COPY ./env.sh $DIR
 
 COPY .env $DIR
 
