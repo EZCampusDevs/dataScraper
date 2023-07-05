@@ -73,6 +73,6 @@ MYSQL_USER_PASS_1="${PASSWORD_1}"
     }
   }
 }
-}
+
 
 
