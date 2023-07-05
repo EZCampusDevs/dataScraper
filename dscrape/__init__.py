@@ -103,7 +103,7 @@ def main():
         parsed_args.db_name = str(os.getenv("db_name", "ezcampus_db"))
 
     if not parsed_args.host:
-        parsed_args.host = str(os.getenv("host", "localhost"))
+        parsed_args.host = str(os.getenv("db_host", "localhost"))
 
     if not parsed_args.password:
         parsed_args.password = str(os.getenv("password", "root"))

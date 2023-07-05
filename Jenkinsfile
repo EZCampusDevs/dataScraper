@@ -7,16 +7,16 @@ pipeline {
 
         steps {
 
-          withCredentials([usernamePassword(credentialsId: 'MYSQL_USER_PASS_1', passwordVariable: 'PASSWORD_1', usernameVariable: 'USERNAME_1')]) {
+          withCredentials([usernamePassword(credentialsId: 'MYSQL_USER_PASS_3', passwordVariable: 'PASSWORD_1', usernameVariable: 'USERNAME_1')]) {
 
 
-            writeFile file: './.env', text: """#!/bin/sh
+            writeFile file: './.env', text: """
 username="${USERNAME_1}" 
 password="${PASSWORD_1}" 
 db_name="ezcampus_db"
 db_port="3306"
 db_host="mysql-instance"
-              """
+"""
 
           }
 
@@ -26,8 +26,6 @@ db_host="mysql-instance"
       stage('Build Docker Image') { 
 
         steps { 
-
-          withCredentials([usernamePassword(credentialsId: 'MYSQL_USER_PASS_1', passwordVariable: 'PASSWORD_1', usernameVariable: 'USERNAME_1')]) {
 
             sshPublisher(
                 failOnError: true,
@@ -42,6 +40,7 @@ db_host="mysql-instance"
                     cd ~/pipeline_datascraper
                     chmod +x build.sh
                     ./build.sh
+                    rm -rf ./.env
                     ''', execTimeout: 120000, flatten: false, makeEmptyDirs: true, 
                     noDefaultExcludes: false,
                     patternSeparator: '[, ]+',
@@ -55,7 +54,6 @@ db_host="mysql-instance"
                   useWorkspaceInPromotion: false,
                   verbose: false)
                     ])
-          }
         }
       }
     }
