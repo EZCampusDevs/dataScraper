@@ -10,9 +10,12 @@ pipeline {
           withCredentials([usernamePassword(credentialsId: 'MYSQL_USER_PASS_1', passwordVariable: 'PASSWORD_1', usernameVariable: 'USERNAME_1')]) {
 
 
-            writeFile file: './env.sh', text: """#!/bin/sh
+            writeFile file: './.env', text: """#!/bin/sh
 username="${USERNAME_1}" 
 password="${PASSWORD_1}" 
+db_name="ezcampus_db"
+db_port="3306"
+db_host="mysql-instance"
               """
 
           }
