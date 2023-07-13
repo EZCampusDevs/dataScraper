@@ -329,20 +329,19 @@ class CourseDumper(CourseScraper):
 
         logging.info(f"Scraping using dumper: {self}")
 
-        real_term_id = [i["code"] for i in terms]
-        term_desc = [i["description"] for i in terms]
-
-        logging.info(f"Found term {real_term_id}")
-
-        term_id = database.add_terms(self.school_id, real_term_id, term_desc)
-
         currentYear = (datetime.now().year - 1) * 100
         logging.info(f"Current term year: {currentYear}")
 
-        for real_id, internal_id in zip(real_term_id, term_id):
-            if int(real_id) < currentYear:
-                logging.info(f"Skipping term {real_id} because it should be out of date")
-                continue
+        real_term_id_and_desc = list(filter(lambda x : int(x[0]) >= currentYear, [(i['code'], i['description']) for i in terms]))
+
+        real_term_id = [i[0] for i in real_term_id_and_desc]
+        term_desc = [i[1] for i in real_term_id_and_desc]
+
+        internal_term_ids = database.add_terms(self.school_id, real_term_id, term_desc)
+
+        logging.info(f"Found term {real_term_id}")
+
+        for real_id, internal_id in zip(real_term_id, internal_term_ids):
 
             logging.info(f"Fetching term {real_id}")
             course_codes = self.get_json_course_codes(real_id, "")
