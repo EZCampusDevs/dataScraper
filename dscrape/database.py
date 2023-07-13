@@ -9,13 +9,13 @@ from py_core.db import *
 from py_core.db.db_tables import *
 from py_core import general as py_core_general
 
+
 class Scrape:
     Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
     Scrape_id = -1
 
 
 def get_current_scrape_nt(session: SessionObj):
-
     if Scrape.Scrape_id != -1:
         return Scrape.Scrape_id
 
@@ -35,11 +35,10 @@ def get_current_scrape_nt(session: SessionObj):
 
     return result.scrape_id
 
-def get_current_scrape():
 
+def get_current_scrape():
     session: SessionObj
     with Session().begin() as session:
-
         return get_current_scrape_nt(session)
 
 
@@ -90,20 +89,21 @@ def get_class_type_from_str_no_transaction(value: str, session: SessionObj):
 
     return new_class_type.class_type_id
 
-def get_subject_from_str_no_transaction(subject: str, subject_desc:str, session: SessionObj):
 
+def get_subject_from_str_no_transaction(subject: str, subject_desc: str, session: SessionObj):
     with session.no_autoflush:
         subject_obj = session.query(TBL_Subject).filter_by(subject=subject).first()
 
     if subject_obj is not None:
         return subject_obj.subject_id
 
-    new_subject= TBL_Subject(subject=subject, subject_long=subject_desc)
+    new_subject = TBL_Subject(subject=subject, subject_long=subject_desc)
     session.add(new_subject)
 
     session.flush()
 
     return new_subject.subject_id
+
 
 def add_terms(school_id: int, term_ids: list[int], term_descriptions: list[str]):
     if len(term_ids) != len(term_descriptions):
@@ -220,16 +220,12 @@ def add_course_data(
     session: SessionObj
     with Session().begin() as session:
         for course_id, data, restriction in zip(course_ids, datas, restrictions):
-
             class_type_id = get_class_type_from_str_no_transaction(
-                data["scheduleTypeDescription"],
-                session
+                data["scheduleTypeDescription"], session
             )
 
             subject_id = get_subject_from_str_no_transaction(
-                data["subject"],
-                dataUtil.replace_bad_escapes(data['subjectDescription']),
-                session
+                data["subject"], dataUtil.replace_bad_escapes(data["subjectDescription"]), session
             )
 
             with session.no_autoflush:
@@ -252,8 +248,7 @@ def add_course_data(
                     if (
                         result.campus_description != data["campusDescription"]
                         or result.course_title != data["courseTitle"]
-                        or result.delivery
-                        != data["instructionalMethodDescription"]
+                        or result.delivery != data["instructionalMethodDescription"]
                         or result.subject_id != subject_id
                         or result.class_type_id != class_type_id
                     ):
@@ -276,7 +271,7 @@ def add_course_data(
                     result.open_section = data["openSection"]
                     result.link_identifier = data["linkIdentifier"]
                     result.is_section_linked = data["isSectionLinked"]
-                    result.delivery= data["instructionalMethodDescription"]
+                    result.delivery = data["instructionalMethodDescription"]
             else:
                 result = TBL_Course_Data(
                     # course code
