@@ -76,7 +76,7 @@ def get_restriction_type_from_str(value: str, session: SessionObj):
     return new_class_type.restriction_type_id
 
 
-def get_class_type_from_str(value: str, session: SessionObj):
+def get_class_type_from_str_no_transaction(value: str, session: SessionObj):
     with session.no_autoflush:
         class_type_id = session.query(TBL_Class_Type).filter_by(class_type=value).first()
 
@@ -90,6 +90,20 @@ def get_class_type_from_str(value: str, session: SessionObj):
 
     return new_class_type.class_type_id
 
+def get_subject_from_str_no_transaction(subject: str, subject_desc:str, session: SessionObj):
+
+    with session.no_autoflush:
+        subject_obj = session.query(TBL_Subject).filter_by(subject=subject).first()
+
+    if subject_obj is not None:
+        return subject_obj.subject_id
+
+    new_subject= TBL_Subject(subject=subject, subject_long=subject_desc)
+    session.add(new_subject)
+
+    session.flush()
+
+    return new_subject.subject_id
 
 def add_terms(school_id: int, term_ids: list[int], term_descriptions: list[str]):
     if len(term_ids) != len(term_descriptions):
@@ -206,8 +220,17 @@ def add_course_data(
     session: SessionObj
     with Session().begin() as session:
         for course_id, data, restriction in zip(course_ids, datas, restrictions):
-            # if something goes wrong here it's gonna frick everything up
-            class_type_id = get_class_type_from_str(data["scheduleTypeDescription"], session)
+
+            class_type_id = get_class_type_from_str_no_transaction(
+                data["scheduleTypeDescription"],
+                session
+            )
+
+            subject_id = get_subject_from_str_no_transaction(
+                data["subject"],
+                dataUtil.replace_bad_escapes(data['subjectDescription']),
+                session
+            )
 
             with session.no_autoflush:
                 result = (
@@ -221,7 +244,6 @@ def add_course_data(
                 "campusDescription",
                 "courseTitle",
                 "instructionalMethodDescription",
-                "subjectDescription",
             ):
                 data[c] = dataUtil.replace_bad_escapes(data[c])
 
@@ -230,80 +252,62 @@ def add_course_data(
                     if (
                         result.campus_description != data["campusDescription"]
                         or result.course_title != data["courseTitle"]
-                        or result.instructional_method_description
+                        or result.delivery
                         != data["instructionalMethodDescription"]
-                        or result.subject != data["subject"]
-                        or result.subject_long != data["subjectDescription"]
+                        or result.subject_id != subject_id
                         or result.class_type_id != class_type_id
                     ):
                         logging.info(
                             f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database! Updating..."
                         )
                         result.scrape_id = get_current_scrape()
-                    result.id = data["id"]
+
+                    result.subject_id = subject_id
                     result.crn = data["courseReferenceNumber"]
                     result.course_title = data["courseTitle"]
-                    result.subject = data["subject"]
-                    result.subject_long = data["subjectDescription"]
                     result.sequence_number = str(data["sequenceNumber"])
                     result.campus_description = data["campusDescription"]
                     result.class_type_id = class_type_id
                     result.credit_hours = data["creditHours"]
                     result.maximum_enrollment = data["maximumEnrollment"]
-                    result.enrollment = data["enrollment"]
-                    result.seats_available = data["seatsAvailable"]
-                    result.wait_capacity = data["waitCapacity"]
-                    result.wait_count = data["waitCount"]
-                    result.wait_available = data["waitAvailable"]
-                    result.credit_hour_high = data["creditHourHigh"]
-                    result.credit_hour_low = data["creditHourLow"]
+                    result.current_enrollment = data["enrollment"]
+                    result.maximum_waitlist = data["waitCapacity"]
+                    result.current_waitlist = data["waitCount"]
                     result.open_section = data["openSection"]
                     result.link_identifier = data["linkIdentifier"]
                     result.is_section_linked = data["isSectionLinked"]
-                    result.instructional_method = data["instructionalMethod"]
-                    result.instructional_method_description = data["instructionalMethodDescription"]
+                    result.delivery= data["instructionalMethodDescription"]
             else:
                 result = TBL_Course_Data(
                     # course code
                     course_id=course_id,
                     scrape_id=get_current_scrape(),
                     #
-                    # i have no idea what this value means
-                    id=data["id"],
-                    #
                     # crn / course reference number; this should be an int always
                     crn=data["courseReferenceNumber"],
                     #
                     # Biology II
                     course_title=data["courseTitle"],
-                    # BIOL
-                    subject=data["subject"],
-                    # Biology
-                    subject_long=data["subjectDescription"],
+                    subject_id=subject_id,
                     #
                     # 001, 002, 003...; should always be int
                     sequence_number=str(data["sequenceNumber"]),
-                    #
-                    # TODO: add a table for campus instead of using a VARCHAR
                     campus_description=data["campusDescription"],
-                    #
-                    # Lecture, Laborator, Tutorial
                     class_type_id=class_type_id,
                     #
                     credit_hours=data["creditHours"],
+                    #
                     maximum_enrollment=data["maximumEnrollment"],
-                    enrollment=data["enrollment"],
-                    seats_available=data["seatsAvailable"],
-                    wait_capacity=data["waitCapacity"],
-                    wait_count=data["waitCount"],
-                    wait_available=data["waitAvailable"],
-                    credit_hour_high=data["creditHourHigh"],
-                    credit_hour_low=data["creditHourLow"],
+                    current_enrollment=data["enrollment"],
+                    #
+                    maximum_waitlist=data["waitCapacity"],
+                    current_waitlist=data["waitCount"],
+                    #
                     open_section=data["openSection"],
                     link_identifier=data["linkIdentifier"],
                     is_section_linked=data["isSectionLinked"],
-                    instructional_method=data["instructionalMethod"],
-                    instructional_method_description=data["instructionalMethodDescription"],
+                    #
+                    delivery=data["instructionalMethodDescription"],
                 )
                 session.add(result)
                 session.flush()
@@ -387,10 +391,6 @@ def add_course_data(
                     building_description=dataUtil.replace_bad_escapes(
                         useful_data["buildingDescription"]
                     ),
-                    campus=useful_data["campus"],
-                    campus_description=dataUtil.replace_bad_escapes(
-                        useful_data["campusDescription"]
-                    ),
                     meeting_type=useful_data["meetingType"],
                     meeting_type_description=useful_data["meetingTypeDescription"],
                     start_date=start_date,
@@ -408,7 +408,7 @@ def add_course_data(
                 # we need to make our own unique identifier for the meeting
                 # so this is it, just all the data i figured was important
                 meeting_hash = dataUtil.sha256_of_str(
-                    f"{crn}{term_id}{to_insert.building}{to_insert.campus}{to_insert.meeting_type}"
+                    f"{crn}{term_id}{to_insert.building}{to_insert.meeting_type}"
                     f"{to_insert.start_date}{to_insert.end_date}{to_insert.begin_time}{to_insert.end_time}"
                     f"{to_insert.days_of_week}{to_insert.room}"
                 )
