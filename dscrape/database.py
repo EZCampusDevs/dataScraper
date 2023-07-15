@@ -415,6 +415,7 @@ def add_course_data(
 
                 if not result:
                     session.add(to_insert)
+                    session.flush()
 
             if restriction:
                 add_restriction_nt(course_data_id, restriction, session)
