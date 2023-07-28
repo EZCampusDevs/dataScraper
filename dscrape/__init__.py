@@ -75,16 +75,28 @@ def get_and_prase_args(args):
     general.add_argument(
         "-t", "--threads", dest="threads", help="The number of extractors to run at a single time"
     )
+    general.add_argument("-L", "--loglevel", dest="log_level", help="Set the log level, 0 for INFO, 1 for DEBUG, 2 for WARN, 3 for ERROR")
     return parser.parse_args(args)
 
 
 def main():
-    logging_util.setup_logging()
+    logging_util.setup_logging(log_level=logging.INFO)
     logging_util.add_unhandled_exception_hook()
 
     load_dotenv()
 
     parsed_args = get_and_prase_args(sys.argv[1:])
+
+    if parsed_args.log_level:
+
+        log_level = dataUtil.parse_int(parsed_args.log_level, 0)
+
+        if log_level >= 4:
+            raise Exception("Log level must be 0-4")
+
+        level = [logging.INFO, logging.DEBUG, logging.WARN, logging.ERROR][log_level]
+
+        logging_util.setup_logging(log_level=level)
 
     if parsed_args.listscrape:
         list_extractors()
