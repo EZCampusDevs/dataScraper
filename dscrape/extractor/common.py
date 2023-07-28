@@ -6,8 +6,9 @@ class CourseScraper(requester.Requester):
     Base class for all course scrapers
     """
 
-    SCHOOL_VALUE = None
-    SUBDOMAIN = None
+    SCHOOL_VALUE: str = None
+    SUBDOMAIN: str = None
+    TIMEZONE: str = None
 
     def scrape_and_dump(self, debug_break_1: bool = False):
         """

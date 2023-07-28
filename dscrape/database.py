@@ -42,7 +42,7 @@ def get_current_scrape():
         return get_current_scrape_nt(session)
 
 
-def get_school_id(school_value: str, subdomain: str):
+def get_school_id(school_value: str, subdomain: str, timezone: str):
     session: SessionObj
     with Session().begin() as session:
         result = session.query(TBL_School).filter_by(school_unique_value=school_value).first()
@@ -50,7 +50,7 @@ def get_school_id(school_value: str, subdomain: str):
         if result is not None:
             return result.school_id
 
-        new_result = TBL_School(school_unique_value=school_value, subdomain=subdomain)
+        new_result = TBL_School(school_unique_value=school_value, subdomain=subdomain, timezone=timezone)
         session.add(new_result)
 
         session.flush()
