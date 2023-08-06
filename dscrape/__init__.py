@@ -191,8 +191,8 @@ def main():
             main2()
             return
 
-        # with ThreadPoolExecutor(max_workers=parsed_args.threads) as pool:
-        #     pool.map(scrape_course_information, extractors_to_use)
+        with ThreadPoolExecutor(max_workers=parsed_args.threads) as pool:
+            pool.map(scrape_course_information, extractors_to_use)
 
     finally:
 
