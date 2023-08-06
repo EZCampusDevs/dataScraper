@@ -394,7 +394,7 @@ class CourseDumper(CourseScraper):
 class UOIT_Dumper(CourseDumper):
     SCHOOL_VALUE = "Ontario Tech University - Canada"
     SUBDOMAIN = "otu"
-    TIMEZONE = "est"
+    TIMEZONE = "America/Toronto"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("ssp.mycampus.ca", "UOIT", retries, timeout)
@@ -403,7 +403,7 @@ class UOIT_Dumper(CourseDumper):
 class UVIC_Dumper(CourseDumper):
     SCHOOL_VALUE = "University of Victoria - Canada"
     SUBDOMAIN = "uv"
-    TIMEZONE = "pst"
+    TIMEZONE = "America/Vancouver"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("banner.uvic.ca", "UVIC", retries, timeout)
@@ -412,7 +412,7 @@ class UVIC_Dumper(CourseDumper):
 class DC_Dumper(CourseDumper):
     SCHOOL_VALUE = "Durham College - Canada"
     SUBDOMAIN = "dc"
-    TIMEZONE = "est"
+    TIMEZONE = "America/Toronto"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("ssp.mycampus.ca", "DC", retries, timeout)
@@ -421,7 +421,7 @@ class DC_Dumper(CourseDumper):
 class TTU_Dumper(CourseDumper):
     SCHOOL_VALUE = "Texas Tech University - USA"
     SUBDOMAIN = "ttu"
-    TIMEZONE = "ct"
+    TIMEZONE = "America/Chicago"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("registration.texastech.edu", "TTU", retries, timeout)
@@ -430,7 +430,7 @@ class TTU_Dumper(CourseDumper):
 class RDP_Dumper(CourseDumper):
     SCHOOL_VALUE = "Red Deer Polytechnic - Canada"
     SUBDOMAIN = "rdp"
-    TIMEZONE = "mdt"
+    TIMEZONE = "America/Edmonton"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("myinfo.rdc.ab.ca", "", retries, timeout)
@@ -439,7 +439,7 @@ class RDP_Dumper(CourseDumper):
 class OC_Dumper(CourseDumper):
     SCHOOL_VALUE = "Okanagan College - Canada"
     SUBDOMAIN = "oc"
-    TIMEZONE = "pt"
+    TIMEZONE = "America/Vancouver"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("selfservice.okanagan.bc.ca", "", retries, timeout)
@@ -453,7 +453,7 @@ class TRU_Dumper(CourseDumper):
 
     SCHOOL_VALUE = "Thompson Rivers University - Canada"
     SUBDOMAIN = "tru"
-    TIMEZONE = "cst"
+    TIMEZONE = "America/Vancouver"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("reg-prod.ec.tru.ca", "", retries, timeout)
@@ -462,7 +462,7 @@ class TRU_Dumper(CourseDumper):
 class KPU_Dumper(CourseDumper):
     SCHOOL_VALUE = "Kwantlen Polytechnic University - Canada"
     SUBDOMAIN = "kpu"
-    TIMEZONE = "pst"
+    TIMEZONE = "America/Vancouver"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("banweb3.kpu.ca", "", retries, timeout)
@@ -471,7 +471,7 @@ class KPU_Dumper(CourseDumper):
 class UOS_Dumper(CourseDumper):
     SCHOOL_VALUE = "University of Saskatchewan - Canada"
     SUBDOMAIN = "uos"
-    TIMEZONE = "cst"
+    TIMEZONE = "America/Regina"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("banner.usask.ca", "", retries, timeout)
@@ -480,7 +480,7 @@ class UOS_Dumper(CourseDumper):
 class YU_Dumper(CourseDumper):
     SCHOOL_VALUE = "Yukon University - Canada"
     SUBDOMAIN = "yu"
-    TIMEZONE = "mst"
+    TIMEZONE = "America/Whitehorse"
 
     def __init__(self, retries=float("inf"), timeout=32) -> None:
         super().__init__("banner.yukonu.ca", "", retries, timeout)
