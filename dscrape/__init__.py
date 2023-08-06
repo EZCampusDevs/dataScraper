@@ -191,10 +191,16 @@ def main():
             main2()
             return
 
-        with ThreadPoolExecutor(max_workers=parsed_args.threads) as pool:
-            pool.map(scrape_course_information, extractors_to_use)
+        # with ThreadPoolExecutor(max_workers=parsed_args.threads) as pool:
+        #     pool.map(scrape_course_information, extractors_to_use)
 
     finally:
+
+        try:
+            database.write_scrape()
+        except Exception as e:
+            logging.error(e)
+
         ended_at = dataUtil.time_now_precise()
 
         elapsed = ended_at - started_at

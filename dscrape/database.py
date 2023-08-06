@@ -14,6 +14,26 @@ class Scrape:
     Scrape_Time = datetime.datetime.now(datetime.timezone.utc)
     Scrape_id = -1
 
+def write_scrape():
+
+    with Session().begin() as session:
+        write_scrape_nt(session)
+
+def write_scrape_nt(session : SessionObj):
+
+    if Scrape.Scrape_id == -1:
+        raise Exception("Scrape_id is not set")
+
+    result = session.query(TBL_Scrape_History).filter_by(scrape_id=Scrape.Scrape_id).first()
+
+    if not result:
+        raise Exception(f"Could not find scrape in the db with value {Scrape.Scrape_id}")
+
+    with session.no_autoflush:
+        result.has_finished_scraping = True 
+        result.scrape_time_finished = datetime.datetime.now(datetime.timezone.utc)
+
+    session.flush()
 
 def get_current_scrape_nt(session: SessionObj):
     if Scrape.Scrape_id != -1:
@@ -24,7 +44,12 @@ def get_current_scrape_nt(session: SessionObj):
     result = session.query(TBL_Scrape_History).filter_by(scrape_time=Scrape.Scrape_Time).first()
 
     if not result:
-        result = TBL_Scrape_History(scrape_time=Scrape.Scrape_Time, has_been_indexed=False)
+        result = TBL_Scrape_History(
+            scrape_time=Scrape.Scrape_Time, 
+            scrape_time_finished=Scrape.Scrape_Time, 
+            has_been_indexed=False,
+            has_finished_scraping=False
+            )
 
         session.add(result)
         session.flush()
