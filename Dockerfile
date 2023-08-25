@@ -1,19 +1,17 @@
 FROM python:3-alpine
 
-ARG DIR="/opt/dscrape"
+RUN addgroup data_scrape && adduser -D -G  data_scrape data_scrape
 
-RUN mkdir $DIR
+USER data_scrape
 
-COPY ./dscrape $DIR
-COPY ./py_core $DIR/../py_core
-COPY ./requirements.txt $DIR
-COPY ./entrypoint.sh $DIR
-COPY ./env.sh $DIR
+WORKDIR /home/data_scrape
 
-COPY .env $DIR
+COPY ./dscrape ./dscrape
+COPY ./py_core ./py_core
+COPY ./requirements.txt .
+COPY ./entrypoint.sh .
 
-RUN pip install -r $DIR/requirements.txt
+RUN pip install -r requirements.txt
 
-# have to hard code path here???
-ENTRYPOINT ["/opt/dscrape/entrypoint.sh"]
+ENTRYPOINT ["/home/data_scrape/entrypoint.sh"]
 

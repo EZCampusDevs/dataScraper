@@ -1,7 +1,7 @@
 #!/bin/sh
 
-cd /opt
+cd /home/data_scrape
 
-python ./dscrape/__main__.py $*
+python dscrape/__main__.py $*
 
 
