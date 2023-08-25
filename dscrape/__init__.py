@@ -2,14 +2,17 @@ import traceback
 import logging
 import os
 import sys
+import datetime
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
+from . import constants
 from . import dataUtil
 from . import extractor
 from . import database
 
 from py_core import logging_util
+
 
 
 def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=False):
@@ -75,30 +78,41 @@ def get_and_prase_args(args):
     general.add_argument(
         "-t", "--threads", dest="threads", help="The number of extractors to run at a single time"
     )
-    general.add_argument("-L", "--loglevel", dest="log_level", help="Set the log level, 0 for INFO, 1 for DEBUG, 2 for WARN, 3 for ERROR")
+    general.add_argument("-L", "--loglevel", dest="log_level", help=f"Set the log level, {logging_util.get_level_map_pretty()}")
+    general.add_argument("-f", "--logfile", dest="log_file", help="Set the NAME of the logfile, will be put in the log directory")
+    general.add_argument("-D", "--logdir", dest="log_dir", help="Set the log directroy")
+
     return parser.parse_args(args)
 
 
 def main():
-    logging_util.setup_logging(log_level=logging.INFO)
-    logging_util.add_unhandled_exception_hook()
-
     load_dotenv()
 
     parsed_args = get_and_prase_args(sys.argv[1:])
+    
+    time = datetime.datetime.strftime( datetime.datetime.now(), "%Y-%m-%d_%H-%M-%S")
+    
+    log_dir = parsed_args.log_dir or os.getenv("LOG_DIR", "./logs")
+    log_file = parsed_args.log_file or os.getenv("LOG_FILE", f"{constants.BRAND}{time}.log")
+    log_path = os.path.join(log_dir, log_file)
+    
+    log_level = parsed_args.log_level or os.getenv("LOG_LEVEL", str(logging.INFO))
+    log_level = dataUtil.parse_int(log_level, -1)
+    
+    assert log_level in logging_util.LOG_LEVEL_MAP, f"Unknown log level {log_level}"
 
-    if parsed_args.log_level:
 
-        log_level = dataUtil.parse_int(parsed_args.log_level, 0)
-
-        if log_level >= 4:
-            raise Exception("Log level must be 0-4")
-
-        level = [logging.INFO, logging.DEBUG, logging.WARN, logging.ERROR][log_level]
-
-        logging_util.setup_logging(log_level=level)
+    logging_util.setup_logging(log_file=log_path, log_level=log_level)
+    logging_util.add_unhandled_exception_hook()
+    
+    logging.info("Starting...")
+    logging.info(f"--- {constants.BRAND} ---")
+    logging.info(f"--- {len(constants.BRAND) * ' '} ---")
+    logging.info(f"Date Time: {time}")
+    logging.info(f"Logging to {log_path}")
 
     if parsed_args.listscrape:
+
         list_extractors()
 
         return
