@@ -19,7 +19,7 @@ pipeline {
                     execCommand: '''
                     cd ~/pipeline_datascraper
                     chmod +x build.sh
-                    ./build.sh
+                    ./build.sh USE_LOG_FILE
                     ''', execTimeout: 120000, flatten: false, makeEmptyDirs: true, 
                     noDefaultExcludes: false,
                     patternSeparator: '[, ]+',
