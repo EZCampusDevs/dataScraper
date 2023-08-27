@@ -70,9 +70,9 @@ def get_and_prase_args(args):
         dest="scrape",
         help="The number to indicate which scrapers to run. Can be csv (1,2,3...), can be range, (1,2,3-5)",
     )
-    general.add_argument("-p", "--password", dest="password", help="The database password")
-    general.add_argument("-u", "--username", dest="username", help="The database username")
-    general.add_argument("-H", "--host", dest="host", help="The database host")
+    general.add_argument("-p", "--password", dest="db_password", help="The database password")
+    general.add_argument("-u", "--username", dest="db_username", help="The database username")
+    general.add_argument("-H", "--host", dest="db_host", help="The database host")
     general.add_argument("-n", "--db_name", dest="db_name", help="The database name")
     general.add_argument("-P", "--port", dest="db_port", help="The database port")
     general.add_argument(
@@ -117,28 +117,28 @@ def main():
 
         return
 
-    if parsed_args.password:
-        _ = parsed_args.password
-        parsed_args.password = "*" * len(_)
+    if parsed_args.db_password:
+        _ = parsed_args.db_password
+        parsed_args.db_password = "*" * len(_)
         logging.debug(parsed_args)
-        parsed_args.password = _
+        parsed_args.db_password = _
     else:
         logging.debug(parsed_args)
 
     if not parsed_args.db_name:
-        parsed_args.db_name = str(os.getenv("db_name", "ezcampus_db"))
+        parsed_args.db_name = str( database.get_env_db_name("ezcampus_db"))
 
-    if not parsed_args.host:
-        parsed_args.host = str(os.getenv("db_host", "localhost"))
+    if not parsed_args.db_host:
+        parsed_args.db_host = str(database.get_env_db_host("localhost"))
 
-    if not parsed_args.password:
-        parsed_args.password = str(os.getenv("password", "root"))
+    if not parsed_args.db_password:
+        parsed_args.db_password = str(database.get_env_db_password("root"))
 
-    if not parsed_args.username:
-        parsed_args.username = str(os.getenv("username", "test"))
+    if not parsed_args.db_username:
+        parsed_args.db_username = str(database.get_env_db_user("test"))
 
     if not parsed_args.db_port:
-        parsed_args.db_port = int(os.getenv("db_port", 3306))
+        parsed_args.db_port = int(database.get_env_db_port(3306))
 
     if not parsed_args.threads:
         parsed_args.threads = 5
@@ -174,20 +174,20 @@ def main():
 
     logging.debug(extractors_to_use)
 
-    logging.info(f"Read hostname {parsed_args.host}")
+    logging.info(f"Read hostname {parsed_args.db_host}")
     logging.info(f"Read port {parsed_args.db_port}")
     logging.info(f"Read database name {parsed_args.db_name}")
-    logging.info(f"Read username {parsed_args.username}")
-    logging.info(f"Read password {'*'*len(parsed_args.password)}")
+    logging.info(f"Read username {parsed_args.db_username}")
+    logging.info(f"Read password {'*'*len(parsed_args.db_password)}")
     logging.info(f"Read threads {parsed_args.threads}")
 
     database.init_database(
         use_mysql=True,
         db_port=parsed_args.db_port,
-        db_host=parsed_args.host,
+        db_host=parsed_args.db_host,
         db_name=parsed_args.db_name,
-        db_user=parsed_args.username,
-        db_pass=parsed_args.password,
+        db_user=parsed_args.db_username,
+        db_pass=parsed_args.db_password,
         create=not parsed_args.clean,
         check_env=False,
     )
