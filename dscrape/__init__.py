@@ -57,6 +57,7 @@ def get_and_prase_args(args):
     general.add_argument(
         "-d", "--debug", dest="debug", action="store_true", help="Run the debug main method"
     )
+    general.add_argument("-Y", "--yes_prompt", action="store_true", dest="yes_prompt", help="Say yes to all prompts")
     general.add_argument(
         "-l",
         "--list-scrapers",
@@ -193,7 +194,7 @@ def main():
     )
 
     if parsed_args.clean:
-        if dataUtil.ask_for_confirmation("Are you sure you want to delete the entire database? "):
+        if parsed_args.yes_prompt or dataUtil.ask_for_confirmation("Are you sure you want to delete the entire database? "):
             database.drop_all()
         return
 
