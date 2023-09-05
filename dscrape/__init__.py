@@ -190,7 +190,7 @@ def main():
         db_user=parsed_args.db_username,
         db_pass=parsed_args.db_password,
         create=not parsed_args.clean,
-        check_env=False,
+        load_env=False,
     )
 
     if parsed_args.clean:
