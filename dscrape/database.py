@@ -73,9 +73,13 @@ def get_school_id(school_value: str, subdomain: str, timezone: str):
         result = session.query(TBL_School).filter_by(school_unique_value=school_value).first()
 
         if result is not None:
+            
+            result.scrape_id_last = get_current_scrape()
+
             return result.school_id
 
-        new_result = TBL_School(school_unique_value=school_value, subdomain=subdomain, timezone=timezone)
+        new_result = TBL_School(school_unique_value=school_value, subdomain=subdomain, timezone=timezone,
+                                scrape_id_last=get_current_scrape())
         session.add(new_result)
 
         session.flush()
@@ -280,8 +284,9 @@ def add_course_data(
                         logging.info(
                             f"CourseData with course_id={course_id} and crn={data['courseReferenceNumber']} was already in the database! Updating..."
                         )
-                        result.scrape_id = get_current_scrape()
+                        result.should_be_indexed = True
 
+                    result.scrape_id = get_current_scrape()
                     result.subject_id = subject_id
                     result.crn = data["courseReferenceNumber"]
                     result.course_title = data["courseTitle"]
@@ -302,6 +307,7 @@ def add_course_data(
                     # course code
                     course_id=course_id,
                     scrape_id=get_current_scrape(),
+                    should_be_indexed=True,
                     #
                     # crn / course reference number; this should be an int always
                     crn=data["courseReferenceNumber"],

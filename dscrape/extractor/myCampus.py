@@ -62,7 +62,6 @@ class CourseDumper(CourseScraper):
         if self.SCHOOL_VALUE is None:
             raise RuntimeError("SCHOOL_VALUE was None, this is a compile error")
 
-        self.school_id = database.get_school_id(self.SCHOOL_VALUE, self.SUBDOMAIN, self.TIMEZONE)
 
         self.hostname = hostname
 
@@ -327,6 +326,9 @@ class CourseDumper(CourseScraper):
         return
 
     def scrape_and_dump(self, debug_break_1=False):
+
+        self.school_id = database.get_school_id(self.SCHOOL_VALUE, self.SUBDOMAIN, self.TIMEZONE)
+
         terms = self.get_json_terms()
 
         logging.info(f"Scraping using dumper: {self}")
