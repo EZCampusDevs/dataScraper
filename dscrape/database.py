@@ -409,6 +409,7 @@ def add_course_data(
 
                 to_insert = TBL_Meeting(
                     meeting_hash=b"",
+                    scrape_id=get_current_scrape(),
                     course_data_id=course_data_id,
                     crn=crn,
                     term_id=term_id,
