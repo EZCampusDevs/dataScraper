@@ -50,7 +50,6 @@ header:
     - 'README'
     - 'py_core'
     - 'migrations'
-    - 'Jenkinsfile'
     - 'dist'
     - 'licenses'
     - 'Dockerfile'
