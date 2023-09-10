@@ -26,6 +26,9 @@ def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=Fal
         if dumper.school_id is not None:
 
             database.delete_old_data(dumper.school_id)
+            
+    except KeyboardInterrupt:
+        logging.info("Keyboard Interrupt, exiting thread")
 
     except Exception as e:
         logging.error("Unknown error has occured!")
@@ -214,6 +217,9 @@ def main():
 
         with ThreadPoolExecutor(max_workers=parsed_args.threads) as pool:
             pool.map(scrape_course_information, extractors_to_use)
+            
+    except KeyboardInterrupt:
+        logging.info("Keyboard Interrupt exiting")
 
     finally:
 
