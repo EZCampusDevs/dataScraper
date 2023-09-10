@@ -19,7 +19,7 @@ def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=Fal
     try:
         dumper = dumper()
 
-        dumper.scrape_and_dump(debug_break_1 or True)
+        dumper.scrape_and_dump(debug_break_1)
         
         logging.debug(f"Course dumper id is {dumper.school_id}")
         
