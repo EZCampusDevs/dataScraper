@@ -40,18 +40,22 @@ header:
 
 
   paths-ignore:
-    - 'migrations'
     - '.licenserc.yaml'
     - '.github/*'
-    - 'dist'
-    - 'licenses'
+    - '.gitmodules'
+    - '.gitignore'
     - '**/*.md'
     - 'LICENSE'
     - 'NOTICE'
     - 'README'
+    - 'py_core'
+    - 'migrations'
+    - 'Jenkinsfile'
+    - 'dist'
+    - 'licenses'
     - 'Dockerfile'
     - 'alembic.ini'
-    - '.gitignore'
     - 'pyproject.toml'
+    - 'environment.yml'
 
   comment: on-failure
