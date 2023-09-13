@@ -21,6 +21,6 @@ alembic upgrade head
 
 cd ..
 
-python dscrape/__main__.py $*
+python dscrape/main.py $*
 
 
