@@ -77,6 +77,7 @@ class CourseDumper(CourseScraper):
         if self.SCHOOL_VALUE is None:
             raise RuntimeError("SCHOOL_VALUE was None, this is a compile error")
 
+        self.school_id = None
 
         self.hostname = hostname
 

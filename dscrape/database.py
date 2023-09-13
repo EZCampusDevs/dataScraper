@@ -13,10 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from sqlalchemy.orm.session import Session as SessionObj
+
 import os
 import datetime
 import logging
+
+from sqlalchemy import Delete
 
 from . import dataUtil
 
@@ -504,3 +506,42 @@ def add_restriction_nt(
                 )
                 session.add(mapping)
                 session.flush()
+
+
+
+
+def delete_old_data(school_id: int):
+    
+    if not school_id or school_id < 1:
+        raise Exception("School value must be non-null and greator than 0")
+    
+    logging.info(f"Preparing to delete old data for {school_id}")
+
+    session: SessionObj
+
+    with Session().begin() as session:
+
+        last_scrap_id = session.query(TBL_School) \
+                            .filter_by(school_id = school_id) \
+                            .first()
+                            
+
+        datas = (session.query(TBL_Course_Data) 
+                            .join(TBL_Course) 
+                            .join(TBL_Term) 
+                            .join(TBL_School) 
+                            .filter(
+                                TBL_School.school_id == school_id,
+                                TBL_Course_Data.scrape_id != last_scrap_id.scrape_id_last) 
+                            .all())
+                            
+        
+        deleted_query = (Delete(TBL_Course_Data)
+                             .where(
+                                    TBL_Course_Data.course_data_id.in_(
+                                            d.course_data_id for d in datas)
+                                            )
+                                    )
+        
+        session.execute(deleted_query)
+        
