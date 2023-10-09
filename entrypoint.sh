@@ -17,7 +17,15 @@
 
 cd /home/data_scrape/py_core
 
-alembic upgrade head
+alembic ensure_version
+
+if ! alembic check; then
+
+   echo "Running database migrations"
+
+   alembic upgrade head
+
+fi
 
 cd ..
 
