@@ -26,6 +26,7 @@ from . import dataUtil
 from . import extractor
 from . import database
 
+import py_core
 from py_core import logging_util
 
 
@@ -213,7 +214,7 @@ def main():
         db_name=parsed_args.db_name,
         db_user=parsed_args.db_username,
         db_pass=parsed_args.db_password,
-        create=not parsed_args.clean,
+        create=False, # always let alembic create the database
         load_env=False,
     )
 
