@@ -161,8 +161,15 @@ class CourseDumper(CourseScraper):
         sent_course_codes = 0
 
         while sent_course_codes < course_code_count:
+
             if retries > retry_amount:
-                raise Exception("Max retries exceeded while trying to get course_data")
+
+                logging.error(f"Max retries exceeded while trying to get course_data for term {term_id}")
+                
+                if sublist:
+                    logging.error(f"Sublist of course codes was: {sublist}")
+
+                return {}
 
             sublist = course_codes[sent_course_codes : sent_course_codes + course_code_send_amount]
 
@@ -227,48 +234,6 @@ class CourseDumper(CourseScraper):
 
         return {}
 
-        course_code_count = COURSE_CODE_REQUEST_AMOUNT
-        for i in range(0, len(course_codes), course_code_count):
-            sublist = course_codes[i : i + course_code_count]
-
-            if sublist:
-                course_code_list = [code.upper() for code in sublist]
-                course_codes_request = "%2C".join(course_code_list)
-
-            else:
-                continue
-
-            self.session.get(
-                url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
-                timeout=5,
-            )
-
-            url = COURSE_DATA_GET_URL.format(
-                HOST=self.hostname,
-                MEP_CODE=self.mep_code,
-                TERM_ID=term_id,
-                COURSE_CODES=course_codes_request,
-                MAX_COUNT=max_count,
-            )
-
-            r = self.request("get", url)
-
-            if r.status_code == 200:
-                j = r.json()
-
-                if "data" in j:
-                    if len(j["data"]) >= API_COURSE_DATAS_LIMIT:
-                        continue
-
-                yield j
-                continue
-
-            logging.warning(
-                f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}"
-            )
-            continue
-
-        return {}
 
     def get_course_restrictions(self, term: int, crn: int) -> bytes:
         self.auth_terms()
