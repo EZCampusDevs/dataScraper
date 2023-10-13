@@ -60,8 +60,8 @@ COURSE_DATA_GET_URL = "https://{HOST}/StudentRegistrationSsb/ssb/searchResults/s
 COURSE_CODE_REQUEST_AMOUNT = 150
 
 
-MATCHES_RESTRICTION_GROUP = re.compile("^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
-MATCHES_RESTRICTION_SPECIAL = re.compile("^special approvals:$", re.IGNORECASE)
+MATCHES_RESTRICTION_GROUP = re.compile(r"^(must|cannot)\s*be.*following\s*([^:]+):?$", re.IGNORECASE)
+MATCHES_RESTRICTION_SPECIAL = re.compile(r"^special approvals:$", re.IGNORECASE)
 
 
 class CourseDumper(CourseScraper):
