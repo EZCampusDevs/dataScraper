@@ -85,7 +85,7 @@ class CourseDumper(CourseScraper):
 
         self.term_auth_url = TERM_AUTH_URL.format(HOST=self.hostname, MEP_CODE=self.mep_code)
 
-        self.auth_timeout_seconds = 60
+        self.auth_timeout_seconds = 300
         self.auth_hist = {
             "terms": 0,
         }
