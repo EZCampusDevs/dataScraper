@@ -33,6 +33,7 @@ class Requester:
         response: httpx.Response = None
         tries   : int = 0
         headers : dict[str, str] = {"Accept": "*/*"}
+        timeout_scale = 1
 
         if self.headers:
             headers.update(self.headers)
@@ -58,10 +59,14 @@ class Requester:
                     method,
                     url,
                     headers=headers,
-                    timeout=self.timeout,
+                    timeout=self.timeout * timeout_scale,
                     **kwargs,
                 )
-            except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            except httpx.TimeoutException as exc:
+                timeout_scale += 1
+                logging.warning(exc)
+                continue
+            except httpx.ConnectError as exc:
                 logging.warning(exc)
                 continue
 

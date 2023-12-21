@@ -69,7 +69,7 @@ class CourseDumper(CourseScraper):
         self,
         hostname: str,
         mep_code: str,
-        retries=float("inf"),
+        retries=5,
         timeout=32,
     ) -> None:
         super().__init__(retries, timeout)
@@ -85,7 +85,7 @@ class CourseDumper(CourseScraper):
 
         self.term_auth_url = TERM_AUTH_URL.format(HOST=self.hostname, MEP_CODE=self.mep_code)
 
-        self.auth_timeout_seconds = 300
+        self.auth_timeout_seconds = 300 * 2
         self.auth_hist = {
             "terms": 0,
         }
@@ -101,7 +101,7 @@ class CourseDumper(CourseScraper):
 
         logging.info(f"{self.log_prefix} Refreshing terms auth")
 
-        self.session.get(self.term_auth_url, timeout=self.auth_timeout_seconds)
+        self.request("get", self.term_auth_url, timeout=self.auth_timeout_seconds)
 
         self.auth_hist["terms"] = DU.time_now_int()
 
@@ -131,7 +131,15 @@ class CourseDumper(CourseScraper):
         url = COURSE_CODES_GET_URL.format(
             HOST=self.hostname, SEARCH=search_code, TERM_ID=term_id, MAX_COUNT=max_count
         )
+
         r = self.request("get", url)
+
+        if r is None:
+            logging.warning(
+                f"{self.log_prefix} get_json_course_codes got None response."
+            )
+            return {}
+
 
         if r.status_code == 200:
             return r.json()
@@ -186,7 +194,6 @@ class CourseDumper(CourseScraper):
 
             self.session.get(
                 url=TERM_SEARCH_AUTH_URL.format(HOST=self.hostname, TERM=term_id),
-                timeout=5,
             )
 
             url = COURSE_DATA_GET_URL.format(
@@ -199,6 +206,13 @@ class CourseDumper(CourseScraper):
 
             r = self.request("get", url)
 
+            if r is None:
+                logging.warning(
+                    f"{self.log_prefix} get_json_course_data got None response\nRetrying..."
+                )
+                retries += 1
+                continue
+
             if r.status_code != 200:
                 logging.warning(
                     f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}\nRetrying..."
@@ -206,7 +220,13 @@ class CourseDumper(CourseScraper):
                 retries += 1
                 continue
 
-            j = r.json()
+            try:
+                j = r.json()
+            except json.JSONDecodeError as e:
+                logging.warning("Did not get valid json response! Retrying...")
+                retries += 1
+                continue
+
 
             data = j.get("data", None)
 
@@ -240,6 +260,12 @@ class CourseDumper(CourseScraper):
 
         url = TERM_SEARCH_GET_RESTRICTION.format(HOST=self.hostname, TERM=term, CRN=crn)
         r = self.request("get", url)
+
+        if r is None:
+            logging.warning(
+                f"{self.log_prefix} get_course_restrictions got None response."
+            )
+            return {"levels": [], "degrees": []}
 
         if r.status_code != 200:
             return {"levels": [], "degrees": []}
@@ -379,7 +405,7 @@ class UOIT_Dumper(CourseDumper):
     SUBDOMAIN = "otu"
     TIMEZONE = "America/Toronto"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
+    def __init__(self, retries=float("inf"), timeout=4*32) -> None:
         super().__init__("ssp.mycampus.ca", "UOIT", retries, timeout)
 
 
