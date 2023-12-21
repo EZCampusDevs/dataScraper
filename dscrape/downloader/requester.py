@@ -72,7 +72,7 @@ class Requester:
                 timeout_scale += 1
                 logging.warning(exc)
                 continue
-            except httpx.ConnectError as exc:
+            except (httpx.ConnectError, httpx.RemoteProtocolError) as exc:
                 logging.warning(exc)
                 continue
 
