@@ -34,12 +34,18 @@ class Requester:
         tries   : int = 0
         headers : dict[str, str] = {"Accept": "*/*"}
         timeout_scale = 1
+        timeout = self.timeout
 
         if self.headers:
             headers.update(self.headers)
 
         if "headers" in kwargs:
             headers.update(kwargs["headers"])
+            del kwargs["headers"]
+
+        if "timeout" in kwargs: 
+            timeout = kwargs["timeout"]
+            del kwargs["timeout"]
 
         while True:
             if tries > 0:
@@ -59,7 +65,7 @@ class Requester:
                     method,
                     url,
                     headers=headers,
-                    timeout=self.timeout * timeout_scale,
+                    timeout=(timeout * timeout_scale),
                     **kwargs,
                 )
             except httpx.TimeoutException as exc:
