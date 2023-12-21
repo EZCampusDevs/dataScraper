@@ -35,6 +35,7 @@ https://ssp.mycampus.ca/StudentRegistrationSsb/ssb/classSearch/get_subject?searc
 """
 
 MAX_COUNT = 9999999
+DEFAULT_TIMEOUT = 3 * 60 # the server is super slow
 
 TERM_AUTH_URL = (
     "https://{HOST}/StudentRegistrationSsb/ssb/term/termSelection?mode=search&mepCode={MEP_CODE}"
@@ -70,7 +71,7 @@ class CourseDumper(CourseScraper):
         hostname: str,
         mep_code: str,
         retries=5,
-        timeout=32,
+        timeout=DEFAULT_TIMEOUT,
     ) -> None:
         super().__init__(retries, timeout)
 
@@ -116,7 +117,7 @@ class CourseDumper(CourseScraper):
             return r.json()
 
         logging.warning(
-            f"{self.log_prefix} get_json_terms got status code {r.status_code} with reason: {r.reason}"
+            f"{self.log_prefix} get_json_terms got status code {r.status_code} with reason: {r.reason_phrase}"
         )
         logging.warning(r)
         logging.warning(r.text)
@@ -145,7 +146,7 @@ class CourseDumper(CourseScraper):
             return r.json()
 
         logging.warning(
-            f"{self.log_prefix} get_json_course_codes got status code {r.status_code} with reason: {r.reason}"
+            f"{self.log_prefix} get_json_course_codes got status code {r.status_code} with reason: {r.reason_phrase}"
         )
 
         return {}
@@ -215,7 +216,7 @@ class CourseDumper(CourseScraper):
 
             if r.status_code != 200:
                 logging.warning(
-                    f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason}\nRetrying..."
+                    f"{self.log_prefix} get_json_course_data got status code {r.status_code} with reason: {r.reason_phrase}\nRetrying..."
                 )
                 retries += 1
                 continue
@@ -405,8 +406,8 @@ class UOIT_Dumper(CourseDumper):
     SUBDOMAIN = "otu"
     TIMEZONE = "America/Toronto"
 
-    def __init__(self, retries=float("inf"), timeout=4*32) -> None:
-        super().__init__("ssp.mycampus.ca", "UOIT", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("ssp.mycampus.ca", "UOIT")
 
 
 class UVIC_Dumper(CourseDumper):
@@ -414,8 +415,8 @@ class UVIC_Dumper(CourseDumper):
     SUBDOMAIN = "uv"
     TIMEZONE = "America/Vancouver"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("banner.uvic.ca", "UVIC", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("banner.uvic.ca", "UVIC")
 
 
 class DC_Dumper(CourseDumper):
@@ -423,8 +424,8 @@ class DC_Dumper(CourseDumper):
     SUBDOMAIN = "dc"
     TIMEZONE = "America/Toronto"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("ssp.mycampus.ca", "DC", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("ssp.mycampus.ca", "DC")
 
 
 class TTU_Dumper(CourseDumper):
@@ -432,8 +433,8 @@ class TTU_Dumper(CourseDumper):
     SUBDOMAIN = "ttu"
     TIMEZONE = "America/Chicago"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("registration.texastech.edu", "TTU", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("registration.texastech.edu", "TTU")
 
 
 class RDP_Dumper(CourseDumper):
@@ -441,8 +442,8 @@ class RDP_Dumper(CourseDumper):
     SUBDOMAIN = "rdp"
     TIMEZONE = "America/Edmonton"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("myinfo.rdc.ab.ca", "", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("myinfo.rdc.ab.ca", "")
 
 
 class OC_Dumper(CourseDumper):
@@ -450,8 +451,8 @@ class OC_Dumper(CourseDumper):
     SUBDOMAIN = "oc"
     TIMEZONE = "America/Vancouver"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("selfservice.okanagan.bc.ca", "", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("selfservice.okanagan.bc.ca", "")
 
 
 class TRU_Dumper(CourseDumper):
@@ -464,8 +465,8 @@ class TRU_Dumper(CourseDumper):
     SUBDOMAIN = "tru"
     TIMEZONE = "America/Vancouver"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("reg-prod.ec.tru.ca", "", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("reg-prod.ec.tru.ca", "")
 
 
 class KPU_Dumper(CourseDumper):
@@ -473,8 +474,8 @@ class KPU_Dumper(CourseDumper):
     SUBDOMAIN = "kpu"
     TIMEZONE = "America/Vancouver"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("banweb3.kpu.ca", "", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("banweb3.kpu.ca", "")
 
 
 class UOS_Dumper(CourseDumper):
@@ -482,8 +483,8 @@ class UOS_Dumper(CourseDumper):
     SUBDOMAIN = "uos"
     TIMEZONE = "America/Regina"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("banner.usask.ca", "", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("banner.usask.ca", "")
 
 
 class YU_Dumper(CourseDumper):
@@ -491,5 +492,5 @@ class YU_Dumper(CourseDumper):
     SUBDOMAIN = "yu"
     TIMEZONE = "America/Whitehorse"
 
-    def __init__(self, retries=float("inf"), timeout=32) -> None:
-        super().__init__("banner.yukonu.ca", "", retries, timeout)
+    def __init__(self) -> None:
+        super().__init__("banner.yukonu.ca", "")
