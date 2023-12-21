@@ -13,8 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import requests
-from requests.exceptions import RequestException, ConnectionError, Timeout
+import httpx
 
 import time
 
@@ -23,17 +22,17 @@ import logging
 
 class Requester:
     def __init__(self, retries=float("inf"), timeout=32) -> None:
-        self.session = requests.Session()
-        self.chunk_size = 16384
+        self.session : httpx.Client = httpx.Client()
+        self.chunk_size : int = 16384
 
-        self.headers = {}
-        self.retries = retries
-        self.timeout = timeout
+        self.headers : dict[str, str] = {}
+        self.retries : int = retries
+        self.timeout : int = timeout
 
     def request(self, method, url, **kwargs):
-        response: requests.Response = None
-        tries = 0
-        headers = {"Accept": "*/*"}
+        response: httpx.Response = None
+        tries   : int = 0
+        headers : dict[str, str] = {"Accept": "*/*"}
 
         if self.headers:
             headers.update(self.headers)
@@ -58,12 +57,11 @@ class Requester:
                 response = self.session.request(
                     method,
                     url,
-                    stream=True,
                     headers=headers,
                     timeout=self.timeout,
                     **kwargs,
                 )
-            except (ConnectionError, Timeout) as exc:
+            except (httpx.ConnectError, httpx.TimeoutException) as exc:
                 logging.warning(exc)
                 continue
 

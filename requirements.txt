@@ -1,5 +1,5 @@
 SQLAlchemy~=2.0.7
-requests~=2.2
+httpx~=0.26
 mysql-connector-python~=8.0.30
 python-dateutil~=2.8
 beautifulsoup4~=4.12.2
