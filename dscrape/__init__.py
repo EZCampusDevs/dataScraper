@@ -39,9 +39,9 @@ def scrape_course_information(dumper: extractor.CourseScraper, debug_break_1=Fal
         
         logging.debug(f"Course dumper id is {dumper.school_id}")
         
-        if dumper.school_id is not None:
+        # if dumper.school_id is not None:
 
-            database.delete_old_data(dumper.school_id)
+        #    database.delete_old_data(dumper.school_id)
             
     except KeyboardInterrupt:
         logging.info("Keyboard Interrupt, exiting thread")
